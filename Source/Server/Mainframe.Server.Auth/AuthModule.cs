@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Mainframe.Server.Auth;
 
+[ExcludeFromCodeCoverage]
 public static class AuthModule
 {
     public static IServiceCollection AddAuthModule(this IServiceCollection services)

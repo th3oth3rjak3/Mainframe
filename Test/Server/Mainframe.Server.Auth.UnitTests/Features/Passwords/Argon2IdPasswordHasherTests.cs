@@ -14,6 +14,9 @@ public class Argon2IdPasswordHasherTests
 
         err = hasher.Hash(null!).UnwrapError();
         Assert.IsType<ArgumentException>(err);
+
+        err = hasher.Hash("  ").UnwrapError();
+        Assert.IsType<ArgumentException>(err);
     }
 
     [Fact]
