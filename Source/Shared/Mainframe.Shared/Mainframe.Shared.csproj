@@ -6,4 +6,7 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+	<ItemGroup>
+		<PackageReference Include="CSharp.Made.Functional" Version="3.0.0" />
+	</ItemGroup>
 </Project>

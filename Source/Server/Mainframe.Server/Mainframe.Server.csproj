@@ -1,31 +1,32 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-    <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <Nullable>enable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-    </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+	</PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.0" />
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0"/>
-        <PackageReference Include="Scalar.AspNetCore" Version="2.11.1" />
-    </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.0" />
+		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
+		<PackageReference Include="Scalar.AspNetCore" Version="2.11.1" />
+	</ItemGroup>
 
-    <ItemGroup>
-      <Content Include="..\..\..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
-    </ItemGroup>
+	<ItemGroup>
+		<Content Include="..\..\..\.dockerignore">
+			<Link>.dockerignore</Link>
+		</Content>
+	</ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\..\Client\Mainframe.Client.Recipes\Mainframe.Client.Recipes.csproj" />
-      <ProjectReference Include="..\..\Client\Mainframe.Client\Mainframe.Client.csproj" />
-      <ProjectReference Include="..\..\Shared\Mainframe.Shared\Mainframe.Shared.csproj" />
-      <ProjectReference Include="..\Mainframe.Server.Infrastructure\Mainframe.Server.Infrastructure.csproj" />
-      <ProjectReference Include="..\Mainframe.Server.Data\Mainframe.Server.Data.csproj" />
-      <ProjectReference Include="..\Mainframe.Server.Recipes\Mainframe.Server.Recipes.csproj" />
-    </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\Client\Mainframe.Client.Recipes\Mainframe.Client.Recipes.csproj" />
+		<ProjectReference Include="..\..\Client\Mainframe.Client\Mainframe.Client.csproj" />
+		<ProjectReference Include="..\..\Shared\Mainframe.Shared\Mainframe.Shared.csproj" />
+		<ProjectReference Include="..\Mainframe.Server.Auth\Mainframe.Server.Auth.csproj" />
+		<ProjectReference Include="..\Mainframe.Server.Infrastructure\Mainframe.Server.Infrastructure.csproj" />
+		<ProjectReference Include="..\Mainframe.Server.Data\Mainframe.Server.Data.csproj" />
+		<ProjectReference Include="..\Mainframe.Server.Recipes\Mainframe.Server.Recipes.csproj" />
+	</ItemGroup>
 
 </Project>
