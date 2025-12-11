@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
@@ -79,9 +80,72 @@ func (r *sqliteUserRepository) GetByUsername(username string) (*domain.User, err
 }
 
 func (r *sqliteUserRepository) Create(user *domain.User) error {
-	panic("todo")
+	query := `
+		INSERT INTO users (id, username, email, first_name, last_name, password_hash)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`
+
+	result, err := r.db.Exec(query, user.ID, user.Username, user.Email, user.FirstName, user.LastName, user.PasswordHash)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows != 1 {
+		return fmt.Errorf("expected to create 1 new user row, but rows affected was %d", rows)
+	}
+
+	return nil
 }
 
 func (r *sqliteUserRepository) Update(user *domain.User) error {
-	panic("todo")
+	query := `
+		UPDATE users SET 
+			username = ?, 
+			email = ?, 
+			first_name = ?,
+			last_name = ?,
+			password_hash = ?,
+			last_login = ?,
+			failed_login_attempts = ?,
+			last_failed_login_attempt = ?,
+			is_disabled = ?,
+			created_at = ?,
+			updated_at = ?
+		WHERE id = ?
+	`
+
+	result, err := r.db.Exec(
+		query,
+		user.Username,
+		user.Email,
+		user.FirstName,
+		user.LastName,
+		user.PasswordHash,
+		user.LastLogin,
+		user.FailedLoginAttempts,
+		user.LastFailedLoginAttempt,
+		user.IsDisabled,
+		user.CreatedAt,
+		user.UpdatedAt,
+		user.ID)
+
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows != 1 {
+		return fmt.Errorf("expected to update 1 user row, but rows affected was %d", rows)
+	}
+
+	return nil
 }
