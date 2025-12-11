@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "User authentication and session management",
+        "description": "Centralized Personal Productivity Application",
         "title": "Mainframe API",
         "contact": {},
         "version": "1.0"
@@ -60,10 +60,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.HealthCheckResponse"
                         }
                     }
                 }
@@ -71,6 +68,14 @@
         }
     },
     "definitions": {
+        "handler.HealthCheckResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.LoginRequest": {
             "type": "object",
             "properties": {

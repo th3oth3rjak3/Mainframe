@@ -66,10 +66,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.HealthCheckResponse"
                         }
                     }
                 }
@@ -77,6 +74,14 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "handler.HealthCheckResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.LoginRequest": {
             "type": "object",
             "properties": {
@@ -114,7 +119,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Mainframe API",
-	Description:      "User authentication and session management",
+	Description:      "Centralized Personal Productivity Application",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

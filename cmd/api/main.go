@@ -12,7 +12,7 @@ import (
 
 // @title           Mainframe API
 // @version         1.0
-// @description     User authentication and session management
+// @description     Centralized Personal Productivity Application
 // @host            localhost:8080
 // @BasePath        /
 func main() {

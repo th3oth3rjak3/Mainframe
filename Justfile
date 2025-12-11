@@ -1,3 +1,7 @@
+# Conditionally set the shell based on the operating system
+set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
+set shell := ["sh", "-c"]
+
 # Default task.
 default: dev
 
@@ -32,7 +36,7 @@ swag:
 
 # Run the API in dev mode:
 dev: swag
-    go run ./cmd/api
+    go run ./cmd/api/main.go
 
 # Build the API binary:
 build:
