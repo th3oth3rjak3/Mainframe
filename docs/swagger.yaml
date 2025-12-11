@@ -46,5 +46,22 @@ paths:
             $ref: '#/definitions/handler.LoginResponse'
       summary: Login user
       tags:
-      - auth
+      - Authentication
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Perform Health Check
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health Check
+      tags:
+      - Health
 swagger: "2.0"

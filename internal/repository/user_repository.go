@@ -23,15 +23,16 @@ type UserRepository interface {
 	Update(user *domain.User) error
 }
 
-type SqliteUserRepository struct {
+type sqliteUserRepository struct {
 	db *sqlx.DB
 }
 
+// NewUserRepository creates a new user repository.
 func NewUserRepository(db *sqlx.DB) UserRepository {
-	return &SqliteUserRepository{db: db}
+	return &sqliteUserRepository{db: db}
 }
 
-func (r *SqliteUserRepository) GetByID(id uuid.UUID) (*domain.User, error) {
+func (r *sqliteUserRepository) GetByID(id uuid.UUID) (*domain.User, error) {
 	var user domain.User
 
 	query := `
@@ -54,7 +55,7 @@ func (r *SqliteUserRepository) GetByID(id uuid.UUID) (*domain.User, error) {
 	return &user, nil
 }
 
-func (r *SqliteUserRepository) GetByUsername(username string) (*domain.User, error) {
+func (r *sqliteUserRepository) GetByUsername(username string) (*domain.User, error) {
 	var user domain.User
 
 	query := `
@@ -77,10 +78,10 @@ func (r *SqliteUserRepository) GetByUsername(username string) (*domain.User, err
 	return &user, nil
 }
 
-func (r *SqliteUserRepository) Create(user *domain.User) error {
+func (r *sqliteUserRepository) Create(user *domain.User) error {
 	panic("todo")
 }
 
-func (r *SqliteUserRepository) Update(user *domain.User) error {
+func (r *sqliteUserRepository) Update(user *domain.User) error {
 	panic("todo")
 }

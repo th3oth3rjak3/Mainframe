@@ -3,8 +3,6 @@ package handler
 import (
 	"strings"
 
-	"github.com/alexedwards/argon2id"
-
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
 	"github.com/th3oth3rjak3/mainframe/internal/domain"
@@ -38,17 +36,18 @@ type LoginResponse struct {
 	Email    string `json:"email"`
 }
 
+// HandleLogin logs a user into the application.
+//
 // @Summary      Login user
 // @Description  Authenticate user credentials
-// @Tags         auth
+// @Tags         Authentication
 // @Accept       json
 // @Produce      json
 // @Param        request body LoginRequest true "Login credentials"
 // @Success      200 {object} LoginResponse
 // @Router       /api/auth/login [post]
-func HandleLogin(c echo.Context, userRepo repository.UserRepository) error {
+func HandleLogin(c echo.Context, userRepo repository.UserRepository, pwHasher domain.PasswordHasher) error {
 	const INVALID_MESSAGE = "invalid username or password"
-	const FAKE_HASH_FOR_TIMING_ATTACK_PREVENTION = "$argon2id$v=19$m=65536,t=1,p=16$5+5ObcY5s1LVbxJ/+Xwajg$EtvmraG0bszkPPJW4k3RFYy6UcXZTQahKIl7TLdJ0TE"
 	const INTERNAL_SERVER_ERROR = "something bad happened"
 
 	var req LoginRequest
@@ -73,7 +72,7 @@ func HandleLogin(c echo.Context, userRepo repository.UserRepository) error {
 
 	if user == nil {
 		// Do an arbitrary comparison to prevent timing attacks
-		_, err = argon2id.ComparePasswordAndHash(req.Password, FAKE_HASH_FOR_TIMING_ATTACK_PREVENTION)
+		err = pwHasher.FakeVerify(req.Password)
 
 		if err != nil {
 			log.Error().Err(err).Msg("failed to compare password and hash for nil user")
@@ -83,7 +82,7 @@ func HandleLogin(c echo.Context, userRepo repository.UserRepository) error {
 		return JsonError(c, INVALID_MESSAGE, nil, 401)
 	}
 
-	match, err := argon2id.ComparePasswordAndHash(req.Password, user.PasswordHash)
+	match, err := pwHasher.Verify(req.Password, user.PasswordHash)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to compare password and hash for user")
 		return JsonError(c, INTERNAL_SERVER_ERROR, nil, 500)
@@ -93,6 +92,7 @@ func HandleLogin(c echo.Context, userRepo repository.UserRepository) error {
 		return JsonError(c, INVALID_MESSAGE, nil, 401)
 	}
 
+	// TODO: User has a valid login, add session, make cookie, and then return details for the client.
 	response := LoginResponse{
 		Message:  "Login received",
 		Username: req.Username,
