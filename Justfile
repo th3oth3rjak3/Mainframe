@@ -31,7 +31,7 @@ swag:
 # --- SERVER -------------------------------------------------------------------
 
 # Run the API in dev mode:
-dev:
+dev: swag
     go run ./cmd/api
 
 # Build the API binary:
@@ -40,6 +40,9 @@ build:
 
 
 # --- TESTING / LINTING --------------------------------------------------------
+
+fmt:
+    go fmt ./...
 
 test:
     go test ./...

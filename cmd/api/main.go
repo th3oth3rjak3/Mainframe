@@ -13,6 +13,8 @@ import (
 
 	_ "github.com/th3oth3rjak3/mainframe/docs"
 	"github.com/th3oth3rjak3/mainframe/internal/handler"
+	_ "github.com/th3oth3rjak3/mainframe/internal/logger"
+	mw "github.com/th3oth3rjak3/mainframe/internal/middleware"
 	"github.com/th3oth3rjak3/mainframe/internal/repository"
 )
 
@@ -53,7 +55,7 @@ func main() {
 	e := echo.New()
 
 	// add basic middleware
-	e.Use(middleware.Logger())
+	e.Use(mw.ZerologRequestLogger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.ContextTimeout(60 * time.Second))
 
