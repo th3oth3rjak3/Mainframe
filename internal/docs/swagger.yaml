@@ -59,6 +59,21 @@ paths:
       summary: Login user
       tags:
       - Authentication
+  /api/users:
+    get:
+      consumes:
+      - application/json
+      description: Get all users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: List Users
+      tags:
+      - Users
   /health:
     get:
       consumes:

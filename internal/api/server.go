@@ -57,4 +57,13 @@ func (s *Server) registerRoutes() {
 	authGroup.POST("/login", func(c echo.Context) error {
 		return handler.HandleLogin(c, s.container.AuthenticationService)
 	})
+
+	// PROTECTED ROUTES
+	authMiddleware := mw.NewAuthMiddleware(s.container.SessionRepository, s.container.UserRepository)
+	protectedGroup := apiGroup.Group("")
+	protectedGroup.Use(authMiddleware.SessionAuth)
+
+	// Users Group
+	usersGroup := protectedGroup.Group("/users")
+	usersGroup.GET("", handler.HandleListUsers)
 }
