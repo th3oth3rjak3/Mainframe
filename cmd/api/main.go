@@ -19,13 +19,20 @@ func main() {
 	// Initialize database
 	db, err := data.InitDB()
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to connect to database")
+		log.Fatal().Err(err).Msg("failed to connect to database")
 	}
 	defer db.Close()
 
 	userRepo := repository.NewUserRepository(db)
+	sessionRepo := repository.NewSessionRepository(db)
 	pwHasher := domain.NewPasswordHasher()
-	server := api.NewServer(userRepo, pwHasher)
+
+	server := api.NewServer(
+		userRepo,
+		sessionRepo,
+		pwHasher,
+	)
+
 	err = server.Start(":8080")
 	log.Fatal().Err(err).Msg("shutting down")
 }

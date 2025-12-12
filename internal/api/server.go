@@ -19,7 +19,11 @@ type Server struct {
 }
 
 // NewServer creates a new Server instance and configures its routes.
-func NewServer(userRepo repository.UserRepository, hasher domain.PasswordHasher) *Server {
+func NewServer(
+	userRepo repository.UserRepository,
+	sessionRepo repository.SessionRepository,
+	hasher domain.PasswordHasher,
+) *Server {
 	e := echo.New()
 
 	// Create the server instance
