@@ -1,26 +1,33 @@
 basePath: /
 definitions:
-  handler.HealthCheckResponse:
-    properties:
-      status:
-        type: string
-    type: object
-  handler.LoginRequest:
+  domain.LoginRequest:
     properties:
       password:
         type: string
       username:
         type: string
     type: object
-  handler.LoginResponse:
+  domain.LoginResponse:
     properties:
       email:
         type: string
-      message:
-        example: Login successful
+      firstName:
         type: string
+      lastLogin:
+        type: string
+      lastName:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
       username:
         example: admin
+        type: string
+    type: object
+  handler.HealthCheckResponse:
+    properties:
+      status:
         type: string
     type: object
 host: localhost:8080
@@ -41,14 +48,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handler.LoginRequest'
+          $ref: '#/definitions/domain.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.LoginResponse'
+            $ref: '#/definitions/domain.LoginResponse'
       summary: Login user
       tags:
       - Authentication

@@ -20,8 +20,9 @@ type UserRepository interface {
 	// Create a new user.
 	Create(user *domain.User) error
 
-	// Update an existing user (timestamps, failed login attempts, etc)
-	Update(user *domain.User) error
+	// Update an existing user's basic details, does not update
+	// collection objects like roles.
+	UpdateBasic(user *domain.User) error
 }
 
 type sqliteUserRepository struct {
@@ -53,6 +54,13 @@ func (r *sqliteUserRepository) GetByID(id uuid.UUID) (*domain.User, error) {
 		return nil, err
 	}
 
+	roles, err := r.getRolesForUser(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Roles = roles
+
 	return &user, nil
 }
 
@@ -75,6 +83,13 @@ func (r *sqliteUserRepository) GetByUsername(username string) (*domain.User, err
 	if err != nil {
 		return nil, err
 	}
+
+	roles, err := r.getRolesForUser(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Roles = roles
 
 	return &user, nil
 }
@@ -102,35 +117,29 @@ func (r *sqliteUserRepository) Create(user *domain.User) error {
 	return nil
 }
 
-func (r *sqliteUserRepository) Update(user *domain.User) error {
+func (r *sqliteUserRepository) UpdateBasic(user *domain.User) error {
 	query := `
 		UPDATE users SET 
-			username = ?, 
 			email = ?, 
 			first_name = ?,
 			last_name = ?,
-			password_hash = ?,
 			last_login = ?,
 			failed_login_attempts = ?,
 			last_failed_login_attempt = ?,
 			is_disabled = ?,
-			created_at = ?,
 			updated_at = ?
 		WHERE id = ?
 	`
 
 	result, err := r.db.Exec(
 		query,
-		user.Username,
 		user.Email,
 		user.FirstName,
 		user.LastName,
-		user.PasswordHash,
 		user.LastLogin,
 		user.FailedLoginAttempts,
 		user.LastFailedLoginAttempt,
 		user.IsDisabled,
-		user.CreatedAt,
 		user.UpdatedAt,
 		user.ID)
 
@@ -148,4 +157,27 @@ func (r *sqliteUserRepository) Update(user *domain.User) error {
 	}
 
 	return nil
+}
+
+func (r *sqliteUserRepository) getRolesForUser(userID uuid.UUID) ([]domain.Role, error) {
+	var roles []domain.Role
+
+	query := `
+		SELECT r.id, r.name
+		FROM roles r
+		INNER JOIN user_roles ur 
+			ON ur.role_id = r.id
+		WHERE ur.user_id = ?
+	`
+
+	err := r.db.Select(&roles, query, userID)
+	if err == sql.ErrNoRows {
+		return make([]domain.Role, 0), nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return roles, nil
 }

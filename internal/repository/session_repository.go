@@ -11,7 +11,14 @@ import (
 )
 
 type SessionRepository interface {
+	// GetByID gets a session by its id. If a session is not found
+	// then the returned session will be nil and no error will be returned.
 	GetByID(id uuid.UUID) (*domain.Session, error)
+
+	// Create saves a new session.
+	Create(session *domain.Session) error
+
+	// DeleteByID deletes the session with the given id.
 	DeleteByID(id uuid.UUID) error
 }
 
@@ -41,6 +48,29 @@ func (r *sqliteSessionRepository) GetByID(id uuid.UUID) (*domain.Session, error)
 	}
 
 	return &session, nil
+}
+
+func (r *sqliteSessionRepository) Create(session *domain.Session) error {
+	query := `
+		INSERT INTO sessions (id, user_id, expires_at)
+		VALUES (?, ?, ?)
+	`
+
+	rows, err := r.db.Exec(query, session.ID, session.UserID, session.ExpiresAt)
+	if err != nil {
+		return err
+	}
+
+	affected, err := rows.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected != 1 {
+		return fmt.Errorf("expected to create 1 session, rows affected: %d", rows)
+	}
+
+	return nil
 }
 
 func (r *sqliteSessionRepository) DeleteByID(id uuid.UUID) error {

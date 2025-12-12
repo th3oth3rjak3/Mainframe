@@ -35,7 +35,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.LoginRequest"
+                            "$ref": "#/definitions/domain.LoginRequest"
                         }
                     }
                 ],
@@ -43,7 +43,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.LoginResponse"
+                            "$ref": "#/definitions/domain.LoginResponse"
                         }
                     }
                 }
@@ -74,15 +74,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "handler.HealthCheckResponse": {
-            "type": "object",
-            "properties": {
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "handler.LoginRequest": {
+        "domain.LoginRequest": {
             "type": "object",
             "properties": {
                 "password": {
@@ -93,19 +85,38 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.LoginResponse": {
+        "domain.LoginResponse": {
             "type": "object",
             "properties": {
                 "email": {
                     "type": "string"
                 },
-                "message": {
-                    "type": "string",
-                    "example": "Login successful"
+                "firstName": {
+                    "type": "string"
+                },
+                "lastLogin": {
+                    "type": "string"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "username": {
                     "type": "string",
                     "example": "admin"
+                }
+            }
+        },
+        "handler.HealthCheckResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
                 }
             }
         }

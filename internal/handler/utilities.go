@@ -1,6 +1,10 @@
 package handler
 
-import "github.com/labstack/echo/v4"
+import (
+	"net/http"
+
+	"github.com/labstack/echo/v4"
+)
 
 type ErrorResponse struct {
 	Message string   `json:"message"`
@@ -12,4 +16,13 @@ func JsonError(c echo.Context, message string, details []string, httpStatus int)
 		Message: message,
 		Details: details,
 	})
+}
+
+func InternalServerError(c echo.Context) error {
+	return c.JSON(
+		http.StatusInternalServerError,
+		ErrorResponse{
+			Message: "something bad happened",
+			Details: nil,
+		})
 }

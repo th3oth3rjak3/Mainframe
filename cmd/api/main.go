@@ -2,12 +2,9 @@ package main
 
 import (
 	"github.com/rs/zerolog/log"
-	_ "github.com/th3oth3rjak3/mainframe/internal/logger"
-
 	"github.com/th3oth3rjak3/mainframe/internal/api"
 	"github.com/th3oth3rjak3/mainframe/internal/data"
-	"github.com/th3oth3rjak3/mainframe/internal/domain"
-	"github.com/th3oth3rjak3/mainframe/internal/repository"
+	_ "github.com/th3oth3rjak3/mainframe/internal/logger"
 )
 
 // @title           Mainframe API
@@ -23,16 +20,12 @@ func main() {
 	}
 	defer db.Close()
 
-	userRepo := repository.NewUserRepository(db)
-	sessionRepo := repository.NewSessionRepository(db)
-	pwHasher := domain.NewPasswordHasher()
+	container, err := api.NewServiceContainer(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to initialize service container")
+	}
 
-	server := api.NewServer(
-		userRepo,
-		sessionRepo,
-		pwHasher,
-	)
-
+	server := api.NewServer(container)
 	err = server.Start(":8080")
 	log.Fatal().Err(err).Msg("shutting down")
 }

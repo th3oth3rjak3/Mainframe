@@ -1,40 +1,14 @@
 package handler
 
 import (
-	"strings"
+	"errors"
+	"net/http"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
 	"github.com/th3oth3rjak3/mainframe/internal/domain"
-	"github.com/th3oth3rjak3/mainframe/internal/repository"
+	"github.com/th3oth3rjak3/mainframe/internal/services"
 )
-
-// LoginRequest represents login credentials
-type LoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-func (lr *LoginRequest) Validate() []string {
-	var errs []string
-
-	if strings.TrimSpace(lr.Username) == "" {
-		errs = append(errs, "username is required")
-	}
-
-	if strings.TrimSpace(lr.Password) == "" {
-		errs = append(errs, "password is required")
-	}
-
-	return errs
-}
-
-// LoginResponse represents the login response
-type LoginResponse struct {
-	Message  string `json:"message" example:"Login successful"`
-	Username string `json:"username" example:"admin"`
-	Email    string `json:"email"`
-}
 
 // HandleLogin logs a user into the application.
 //
@@ -43,61 +17,65 @@ type LoginResponse struct {
 // @Tags         Authentication
 // @Accept       json
 // @Produce      json
-// @Param        request body LoginRequest true "Login credentials"
-// @Success      200 {object} LoginResponse
+// @Param        request body domain.LoginRequest true "Login credentials"
+// @Success      200 {object} domain.LoginResponse
 // @Router       /api/auth/login [post]
-func HandleLogin(c echo.Context, userRepo repository.UserRepository, pwHasher domain.PasswordHasher) error {
-	const INVALID_MESSAGE = "invalid username or password"
-	const INTERNAL_SERVER_ERROR = "something bad happened"
+func HandleLogin(
+	c echo.Context,
+	authService services.AuthenticationService,
+) error {
 
-	var req LoginRequest
+	var req domain.LoginRequest
 
 	if err := c.Bind(&req); err != nil {
 		return JsonError(c, "invalid request", nil, 400)
 	}
 
-	errs := req.Validate()
-
-	if len(errs) > 0 {
-		return JsonError(c, "invalid request", errs, 400)
-	}
-
-	var user *domain.User
-	user, err := userRepo.GetByUsername(req.Username)
-
+	user, session, err := authService.Login(&req)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to get by username")
-		return JsonError(c, INTERNAL_SERVER_ERROR, nil, 500)
+		return handleServiceErrors(c, err)
 	}
 
-	if user == nil {
-		// Do an arbitrary comparison to prevent timing attacks
-		err = pwHasher.FakeVerify(req.Password)
+	cookie := createHttpCookie(session)
+	c.SetCookie(cookie)
 
-		if err != nil {
-			log.Error().Err(err).Msg("failed to compare password and hash for nil user")
-			return JsonError(c, INTERNAL_SERVER_ERROR, nil, 500)
-		}
-
-		return JsonError(c, INVALID_MESSAGE, nil, 401)
-	}
-
-	match, err := pwHasher.Verify(req.Password, user.PasswordHash)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to compare password and hash for user")
-		return JsonError(c, INTERNAL_SERVER_ERROR, nil, 500)
-	}
-
-	if !match {
-		return JsonError(c, INVALID_MESSAGE, nil, 401)
-	}
-
-	// TODO: User has a valid login, add session, make cookie, and then return details for the client.
-	response := LoginResponse{
-		Message:  "Login received",
-		Username: req.Username,
-		Email:    user.Email,
-	}
-
+	response := domain.NewLoginResponse(user)
 	return c.JSON(200, response)
+}
+
+func createHttpCookie(session *domain.Session) *http.Cookie {
+	cookie := new(http.Cookie)
+	cookie.Name = "session_id"
+	cookie.Value = session.ID.String()
+	cookie.Expires = session.ExpiresAt
+	cookie.Path = "/"
+	cookie.HttpOnly = true
+	cookie.Secure = true
+	cookie.SameSite = http.SameSiteStrictMode
+
+	return cookie
+}
+
+func handleServiceErrors(c echo.Context, err error) error {
+	var validationError *services.ValidationError
+
+	if errors.As(err, &validationError) {
+		return JsonError(c, validationError.Message, validationError.Details, http.StatusBadRequest)
+	}
+
+	if errors.Is(err, services.ErrUnauthorized) {
+		return JsonError(c, err.Error(), nil, http.StatusUnauthorized)
+	}
+
+	if errors.Is(err, services.ErrForbidden) {
+		return JsonError(c, err.Error(), nil, http.StatusForbidden)
+	}
+
+	log.Error().
+		Err(err).
+		Str("path", c.Path()).
+		Str("request_id", c.Response().Header().Get(echo.HeaderXRequestID)).
+		Msg("Unhandled internal error caught by handler")
+
+	return InternalServerError(c)
 }

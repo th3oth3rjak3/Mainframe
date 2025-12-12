@@ -5,32 +5,23 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/th3oth3rjak3/mainframe/internal/domain"
 	"github.com/th3oth3rjak3/mainframe/internal/handler"
 	mw "github.com/th3oth3rjak3/mainframe/internal/middleware"
-	"github.com/th3oth3rjak3/mainframe/internal/repository"
 )
 
 // Server holds the dependencies for the HTTP server.
 type Server struct {
-	userRepo repository.UserRepository
-	hasher   domain.PasswordHasher
-	router   *echo.Echo
+	router    *echo.Echo
+	container *ServiceContainer
 }
 
 // NewServer creates a new Server instance and configures its routes.
-func NewServer(
-	userRepo repository.UserRepository,
-	sessionRepo repository.SessionRepository,
-	hasher domain.PasswordHasher,
-) *Server {
+func NewServer(container *ServiceContainer) *Server {
 	e := echo.New()
-
 	// Create the server instance
 	s := &Server{
-		userRepo: userRepo,
-		hasher:   hasher,
-		router:   e,
+		container: container,
+		router:    e,
 	}
 
 	// Attach middleware
@@ -64,6 +55,6 @@ func (s *Server) registerRoutes() {
 
 	// auth routes
 	authGroup.POST("/login", func(c echo.Context) error {
-		return handler.HandleLogin(c, s.userRepo, s.hasher)
+		return handler.HandleLogin(c, s.container.AuthenticationService)
 	})
 }
