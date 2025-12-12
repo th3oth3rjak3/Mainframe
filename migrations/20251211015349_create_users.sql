@@ -16,9 +16,6 @@ CREATE TABLE users (
 );
 
 CREATE INDEX idx_users_username ON users(username);
-
-INSERT INTO users (id, username, email, first_name, last_name, password_hash) 
-VALUES ('88d178e9-a2b8-48e3-b991-c2ebef654092', 'admin', 'admin@localhost', 'Local', 'Administrator', 'fake pw hash for now');
 -- +goose StatementEnd
 
 -- +goose Down
