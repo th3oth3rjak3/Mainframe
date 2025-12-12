@@ -12,7 +12,7 @@ import (
 // into the database in a secure way.
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal().Msg("Usage: cli <password>")
+		log.Fatal().Msg("Usage: hasher <password>")
 	}
 
 	hasher := domain.NewPasswordHasher()

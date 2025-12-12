@@ -11,7 +11,7 @@ import (
 func InitDB() (*sqlx.DB, error) {
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
-		dbPath = "data/mainframe.db"
+		dbPath = "internal/data/mainframe.db"
 	}
 	db, err := sqlx.Connect("sqlite", dbPath)
 	if err != nil {

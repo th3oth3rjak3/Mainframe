@@ -3,11 +3,11 @@ package handler
 import (
 	scalargo "github.com/bdpiprava/scalar-go"
 	"github.com/labstack/echo/v4"
-	_ "github.com/th3oth3rjak3/mainframe/docs"
+	_ "github.com/th3oth3rjak3/mainframe/internal/docs"
 )
 
 func HandleOpenAPI(c echo.Context) error {
-	return c.File("./docs/swagger.json")
+	return c.File("./internal/docs/swagger.json")
 }
 
 func HandleDocs(c echo.Context) error {

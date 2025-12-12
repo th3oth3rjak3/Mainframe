@@ -9,24 +9,24 @@ default: dev
 # Create a new goose SQL migration:
 #   just migrate-create add_users_table
 migrate-create name:
-    goose create "{{name}}" sql -dir migrations
+    goose create "{{name}}" sql -dir internal/data/migrations
 
 # Run all migrations:
 migrate-up:
-    goose -dir migrations sqlite3 data/mainframe.db up
+    goose -dir internal/data/migrations sqlite3 internal/data/mainframe.db up
 
 # Roll back the most recent migration:
 migrate-down:
-    goose -dir migrations sqlite3 data/mainframe.db down
+    goose -dir internal/data/migrations sqlite3 internal/data/mainframe.db down
 
 # Reset the database entirely:
 migrate-reset:
-    goose -dir migrations sqlite3 data/mainframe.db reset
+    goose -dir internal/data/migrations sqlite3 internal/data/mainframe.db reset
 
 # --- SWAGGO / OPENAPI ---------------------------------------------------------
 # Regenerate Swagger docs:
 swag:
-    swag init -g cmd/api/main.go -o docs
+    swag init -g cmd/api/main.go -o internal/docs
 
 # --- SERVER -------------------------------------------------------------------
 # Build the API binary into the /bin folder:
@@ -41,6 +41,12 @@ build-hasher-win:
 
 build-hasher:
     go build -o bin/hasher ./cmd/hasher
+
+build-id-win:
+    go build -o bin/id_generator.exe ./cmd/id_generator
+
+build-id:
+    go build -o bin/id_generator ./cmd/id_generator
 
 # Run the API in dev mode:
 dev: swag
@@ -59,6 +65,12 @@ run-hasher pw: build-hasher
 
 run-hasher-win pw: build-hasher-win
     ./bin/hasher {{pw}}
+
+run-id: build-id
+    ./bin/id_generator
+
+run-id-win: build-id-win
+    ./bin/id_generator
 
 # --- TESTING / LINTING --------------------------------------------------------
 fmt:

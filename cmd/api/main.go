@@ -4,8 +4,8 @@ import (
 	"github.com/rs/zerolog/log"
 	_ "github.com/th3oth3rjak3/mainframe/internal/logger"
 
-	"github.com/th3oth3rjak3/mainframe/data"
 	"github.com/th3oth3rjak3/mainframe/internal/api"
+	"github.com/th3oth3rjak3/mainframe/internal/data"
 	"github.com/th3oth3rjak3/mainframe/internal/domain"
 	"github.com/th3oth3rjak3/mainframe/internal/repository"
 )
