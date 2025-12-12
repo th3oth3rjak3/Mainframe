@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE users (
-    id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY NOT NULL,
     username TEXT UNIQUE NOT NULL,
     email TEXT NOT NULL,
     first_name TEXT NOT NULL,
