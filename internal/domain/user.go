@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -64,4 +66,10 @@ func NewUser(
 	}
 
 	return newUser, nil
+}
+
+func (u *User) HasRole(name string) bool {
+	return slices.ContainsFunc(u.Roles, func(r Role) bool {
+		return strings.EqualFold(r.Name, name)
+	})
 }

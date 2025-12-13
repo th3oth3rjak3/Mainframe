@@ -25,6 +25,13 @@ definitions:
         example: admin
         type: string
     type: object
+  domain.Role:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   handler.HealthCheckResponse:
     properties:
       status:
@@ -72,6 +79,23 @@ paths:
       summary: Logout user
       tags:
       - Authentication
+  /api/roles:
+    get:
+      consumes:
+      - application/json
+      description: Get all roles
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Role'
+            type: array
+      summary: List Roles
+      tags:
+      - Roles
   /api/users:
     get:
       consumes:

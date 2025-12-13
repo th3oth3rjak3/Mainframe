@@ -5,6 +5,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/th3oth3rjak3/mainframe/internal/domain"
 	"github.com/th3oth3rjak3/mainframe/internal/handler"
 	mw "github.com/th3oth3rjak3/mainframe/internal/middleware"
 )
@@ -79,6 +80,12 @@ func (s *Server) registerRoutes() {
 		authMiddleware.SessionAuth)
 
 	// Users Group
-	usersGroup := protectedGroup.Group("/users")
+	usersGroup := protectedGroup.Group("/users", mw.RequireRole(domain.Administrator))
 	usersGroup.GET("", handler.HandleListUsers)
+
+	// Roles group
+	rolesGroup := protectedGroup.Group("/roles", mw.RequireRole(domain.Administrator))
+	rolesGroup.GET("", func(c echo.Context) error {
+		return handler.HandleListRoles(c, s.container.RoleService)
+	})
 }

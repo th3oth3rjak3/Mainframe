@@ -37,7 +37,7 @@ func HandleLogin(
 
 	result, err := authService.Login(&req)
 	if err != nil {
-		return handleServiceErrors(c, err)
+		return handleAuthServiceErrors(c, err)
 	}
 
 	cookieService.SetCookie(c, result.Session, result.RawSessionToken)
@@ -62,11 +62,11 @@ func HandleLogout(
 ) error {
 	session, ok := c.Request().Context().Value(mw.SessionContextKey).(*domain.Session)
 	if !ok {
-		return handleServiceErrors(c, fmt.Errorf("could not get session from context"))
+		return handleAuthServiceErrors(c, fmt.Errorf("could not get session from context"))
 	}
 
 	if err := authService.Logout(session); err != nil {
-		return handleServiceErrors(c, err)
+		return handleAuthServiceErrors(c, err)
 	}
 
 	cookieService.ClearCookie(c)
@@ -75,7 +75,7 @@ func HandleLogout(
 	return nil
 }
 
-func handleServiceErrors(c echo.Context, err error) error {
+func handleAuthServiceErrors(c echo.Context, err error) error {
 	var validationError *services.ValidationError
 
 	if errors.As(err, &validationError) {
