@@ -48,6 +48,12 @@ build-id-win:
 build-id:
     go build -o bin/id_generator ./cmd/id_generator
 
+build-hmac:
+    go build -o bin/hmac_key ./cmd/hmac_key
+
+build-hmac-win:
+    go build -o bin/hmac_key.exe ./cmd/hmac_key
+
 # Run the API in dev mode:
 dev: swag
     go run ./cmd/api/main.go
@@ -71,6 +77,12 @@ run-id: build-id
 
 run-id-win: build-id-win
     ./bin/id_generator
+
+run-hmac: build-hmac
+    ./bin/hmac_key
+
+run-hmac-win: build-hmac-win
+    ./bin/hmac_key
 
 # --- TESTING / LINTING --------------------------------------------------------
 fmt:

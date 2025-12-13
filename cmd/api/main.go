@@ -1,6 +1,9 @@
 package main
 
 import (
+	"os"
+
+	"github.com/joho/godotenv"
 	"github.com/rs/zerolog/log"
 	"github.com/th3oth3rjak3/mainframe/internal/api"
 	"github.com/th3oth3rjak3/mainframe/internal/data"
@@ -13,6 +16,13 @@ import (
 // @host            localhost:8080
 // @BasePath        /
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Warn().Msg("Warning: .env file not found, relying on environment variables")
+	}
+
+	serverKey := os.Getenv("SERVER_KEY")
+
 	// Initialize database
 	db, err := data.InitDB()
 	if err != nil {
@@ -20,12 +30,12 @@ func main() {
 	}
 	defer db.Close()
 
-	container, err := api.NewServiceContainer(db)
+	container, err := api.NewServiceContainer(db, serverKey)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initialize service container")
 	}
 
-	server := api.NewServer(container)
+	server := api.NewServer(container, serverKey)
 	err = server.Start(":8080")
 	log.Fatal().Err(err).Msg("shutting down")
 }

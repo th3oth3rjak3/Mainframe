@@ -24,7 +24,7 @@ type ServiceContainer struct {
 
 // NewServiceContainer builds and returns a new dependency container.
 // This is the single place where all application components are instantiated.
-func NewServiceContainer(db *sqlx.DB) (*ServiceContainer, error) {
+func NewServiceContainer(db *sqlx.DB, hmacKey string) (*ServiceContainer, error) {
 	// Infrastructure
 	pwHasher := domain.NewPasswordHasher()
 
@@ -34,7 +34,7 @@ func NewServiceContainer(db *sqlx.DB) (*ServiceContainer, error) {
 
 	// Services
 	userService := services.NewUserService(userRepo, pwHasher)
-	authService := services.NewAuthenticationService(userRepo, sessionRepo, pwHasher)
+	authService := services.NewAuthenticationService(userRepo, sessionRepo, pwHasher, hmacKey)
 	cookieService := services.NewCookieService()
 
 	// Return the fully-built container

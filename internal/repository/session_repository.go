@@ -37,7 +37,7 @@ func (r *sqliteSessionRepository) GetByID(id uuid.UUID) (*domain.Session, error)
 	var session domain.Session
 
 	query := `
-		SELECT id, user_id, expires_at
+		SELECT id, token, user_id, expires_at
 		FROM sessions
 		WHERE id = ?`
 
@@ -59,11 +59,11 @@ func (r *sqliteSessionRepository) GetByID(id uuid.UUID) (*domain.Session, error)
 
 func (r *sqliteSessionRepository) Create(session *domain.Session) error {
 	query := `
-		INSERT INTO sessions (id, user_id, expires_at)
-		VALUES (?, ?, ?)
+		INSERT INTO sessions (id, token, user_id, expires_at)
+		VALUES (?, ?, ?, ?)
 	`
 
-	rows, err := r.db.Exec(query, session.ID, session.UserID, session.ExpiresAt)
+	rows, err := r.db.Exec(query, session.ID, session.Token, session.UserID, session.ExpiresAt)
 	if err != nil {
 		log.Err(err).
 			Str("session_id", session.ID.String()).

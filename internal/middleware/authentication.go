@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
+	"github.com/th3oth3rjak3/mainframe/internal/crypto"
 	"github.com/th3oth3rjak3/mainframe/internal/repository"
 	"github.com/th3oth3rjak3/mainframe/internal/services"
 	"github.com/th3oth3rjak3/mainframe/internal/shared"
@@ -30,6 +31,7 @@ type AuthMiddleware struct {
 	sessionRepo   repository.SessionRepository
 	userRepo      repository.UserRepository
 	cookieService services.CookieService
+	hmacKey       string
 }
 
 // NewAuthMiddleware creates a new instance of our AuthMiddleware.
@@ -37,11 +39,13 @@ func NewAuthMiddleware(
 	sessionRepo repository.SessionRepository,
 	userRepo repository.UserRepository,
 	cookieService services.CookieService,
+	hmacKey string,
 ) *AuthMiddleware {
 	return &AuthMiddleware{
 		sessionRepo:   sessionRepo,
 		userRepo:      userRepo,
 		cookieService: cookieService,
+		hmacKey:       hmacKey,
 	}
 }
 
@@ -53,7 +57,15 @@ func (m *AuthMiddleware) SessionAuth(next echo.HandlerFunc) echo.HandlerFunc {
 		if err != nil {
 			return shared.JsonError(c, "unauthorized", nil, http.StatusUnauthorized)
 		}
-		sessionIDString := cookie.Value
+
+		sessionIDString, rawToken, err := m.cookieService.ParseSessionCookie(cookie)
+		if err != nil {
+			log.Err(err).
+				Msg("couldn't parse the session cookie")
+
+			return shared.InternalServerError(c)
+		}
+
 		sessionID, err := uuid.Parse(sessionIDString)
 		if err != nil {
 			log.Err(err).
@@ -71,6 +83,13 @@ func (m *AuthMiddleware) SessionAuth(next echo.HandlerFunc) echo.HandlerFunc {
 				Msg("failed to get session by id")
 
 			return shared.InternalServerError(c)
+		}
+
+		// Compare the raw token with the hash value
+		valid := crypto.VerifyVerifier(rawToken, []byte(m.hmacKey), session.Token)
+		if !valid {
+			m.cookieService.ClearCookie(c)
+			return shared.JsonError(c, "unauthorized", nil, http.StatusUnauthorized)
 		}
 
 		// deal with expired and not found sessions
@@ -91,7 +110,7 @@ func (m *AuthMiddleware) SessionAuth(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		// Create and set a new cookie with the updated expiration.
-		m.cookieService.SetCookie(c, session)
+		m.cookieService.SetCookie(c, session, rawToken)
 
 		// Fetch the user associated with the valid session.
 		user, err := m.userRepo.GetByID(session.UserID)

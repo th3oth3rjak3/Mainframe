@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/th3oth3rjak3/mainframe/internal/crypto"
 	"github.com/th3oth3rjak3/mainframe/internal/domain"
 	"github.com/th3oth3rjak3/mainframe/internal/repository"
 )
@@ -12,7 +13,7 @@ import (
 const maximumLoginAttemptsAllowed = 5
 
 type AuthenticationService interface {
-	Login(request *domain.LoginRequest) (*domain.User, *domain.Session, error)
+	Login(request *domain.LoginRequest) (*LoginResult, error)
 	Logout(session *domain.Session) error
 }
 
@@ -20,25 +21,34 @@ func NewAuthenticationService(
 	userRepo repository.UserRepository,
 	sessionRepo repository.SessionRepository,
 	pwHasher domain.PasswordHasher,
+	hmacKey string,
 ) AuthenticationService {
 	return &authenticationService{
 		userRepository:    userRepo,
 		sessionRepository: sessionRepo,
 		passwordHasher:    pwHasher,
+		hmacKey:           hmacKey,
 	}
+}
+
+type LoginResult struct {
+	User            *domain.User
+	Session         *domain.Session
+	RawSessionToken []byte
 }
 
 type authenticationService struct {
 	userRepository    repository.UserRepository
 	sessionRepository repository.SessionRepository
 	passwordHasher    domain.PasswordHasher
+	hmacKey           string
 }
 
-func (s *authenticationService) Login(request *domain.LoginRequest) (*domain.User, *domain.Session, error) {
+func (s *authenticationService) Login(request *domain.LoginRequest) (*LoginResult, error) {
 	errs := request.Validate()
 
 	if len(errs) > 0 {
-		return nil, nil, NewValidationError("invalid request", errs)
+		return nil, NewValidationError("invalid request", errs)
 	}
 
 	var user *domain.User
@@ -49,36 +59,36 @@ func (s *authenticationService) Login(request *domain.LoginRequest) (*domain.Use
 			Str("username", request.Username).
 			Msg("a critical datastore error occurred while fetching user by username")
 
-		return nil, nil, fmt.Errorf("datastore error: %w", err)
+		return nil, fmt.Errorf("datastore error: %w", err)
 	}
 
 	if user == nil {
 		_ = s.passwordHasher.FakeVerify(request.Password) // Prevent timing attack
 		log.Warn().Msg("authentication attempt for non-existent user")
-		return nil, nil, ErrUnauthorized
+		return nil, ErrUnauthorized
 	}
 
 	match, err := s.passwordHasher.Verify(request.Password, user.PasswordHash)
 	if err != nil {
 		log.Error().Err(err).Str("username", user.Username).Msg("password verification error")
-		return nil, nil, fmt.Errorf("hasher error: %w", err)
+		return nil, fmt.Errorf("hasher error: %w", err)
 	}
 
 	if !match {
 		err := s.handleFailedLogin(user)
-		return nil, nil, err
+		return nil, err
 	}
 
 	if err = s.handleSuccessfulLogin(user); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	session, err := s.createSessionForUser(user)
+	session, verifier, err := s.createSessionForUser(user)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return user, session, nil
+	return &LoginResult{User: user, Session: session, RawSessionToken: verifier}, nil
 }
 
 func (s *authenticationService) handleFailedLogin(user *domain.User) error {
@@ -116,20 +126,30 @@ func (s *authenticationService) handleSuccessfulLogin(user *domain.User) error {
 	return nil
 }
 
-func (s *authenticationService) createSessionForUser(user *domain.User) (*domain.Session, error) {
-	session, err := domain.NewSession(user.ID)
+func (s *authenticationService) createSessionForUser(user *domain.User) (*domain.Session, []byte, error) {
+	verifier, err := crypto.GenerateRandomBytes(32)
+	if err != nil {
+		log.Err(err).Msg("failed to generate random verifier")
+		return nil, nil, fmt.Errorf("could not generate session verifier: %w", err)
+	}
+
+	serverKey := []byte(s.hmacKey)
+	token := crypto.ComputeHMACSHA256(verifier, serverKey)
+
+	session, err := domain.NewSession(user.ID, token)
+
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create new session")
-		return nil, fmt.Errorf("session creation error: %w", err)
+		return nil, nil, fmt.Errorf("session creation error: %w", err)
 	}
 
 	err = s.sessionRepository.Create(session)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to save new session to the database")
-		return nil, fmt.Errorf("datastore error while saving session: %w", err)
+		return nil, nil, fmt.Errorf("datastore error while saving session: %w", err)
 	}
 
-	return session, nil
+	return session, verifier, nil
 }
 
 func (s *authenticationService) Logout(session *domain.Session) error {

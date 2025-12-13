@@ -13,15 +13,17 @@ import (
 type Server struct {
 	router    *echo.Echo
 	container *ServiceContainer
+	hmacKey   string
 }
 
 // NewServer creates a new Server instance and configures its routes.
-func NewServer(container *ServiceContainer) *Server {
+func NewServer(container *ServiceContainer, hmacKey string) *Server {
 	e := echo.New()
 	// Create the server instance
 	s := &Server{
 		container: container,
 		router:    e,
+		hmacKey:   hmacKey,
 	}
 
 	// Attach middleware
@@ -59,7 +61,12 @@ func (s *Server) registerRoutes() {
 	})
 
 	// PROTECTED ROUTES
-	authMiddleware := mw.NewAuthMiddleware(s.container.SessionRepository, s.container.UserRepository, s.container.CookieService)
+	authMiddleware := mw.NewAuthMiddleware(
+		s.container.SessionRepository,
+		s.container.UserRepository,
+		s.container.CookieService,
+		s.hmacKey,
+	)
 
 	protectedGroup := apiGroup.Group("")
 	protectedGroup.Use(authMiddleware.SessionAuth)

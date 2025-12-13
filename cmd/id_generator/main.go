@@ -7,6 +7,7 @@ import (
 	_ "github.com/th3oth3rjak3/mainframe/internal/logger"
 )
 
+// generate an arbitrary UUID
 func main() {
 	id, err := uuid.NewUUID()
 	if err != nil {

@@ -35,14 +35,14 @@ func HandleLogin(
 		return shared.JsonError(c, "invalid request", nil, 400)
 	}
 
-	user, session, err := authService.Login(&req)
+	result, err := authService.Login(&req)
 	if err != nil {
 		return handleServiceErrors(c, err)
 	}
 
-	cookieService.SetCookie(c, session)
+	cookieService.SetCookie(c, result.Session, result.RawSessionToken)
 
-	response := domain.NewLoginResponse(user)
+	response := domain.NewLoginResponse(result.User)
 	return c.JSON(200, response)
 }
 
