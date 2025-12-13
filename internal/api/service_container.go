@@ -19,6 +19,7 @@ type ServiceContainer struct {
 	// Services
 	UserService           services.UserService
 	AuthenticationService services.AuthenticationService
+	CookieService         services.CookieService
 }
 
 // NewServiceContainer builds and returns a new dependency container.
@@ -34,6 +35,7 @@ func NewServiceContainer(db *sqlx.DB) (*ServiceContainer, error) {
 	// Services
 	userService := services.NewUserService(userRepo, pwHasher)
 	authService := services.NewAuthenticationService(userRepo, sessionRepo, pwHasher)
+	cookieService := services.NewCookieService()
 
 	// Return the fully-built container
 	return &ServiceContainer{
@@ -43,5 +45,6 @@ func NewServiceContainer(db *sqlx.DB) (*ServiceContainer, error) {
 		SessionRepository:     sessionRepo,
 		UserService:           userService,
 		AuthenticationService: authService,
+		CookieService:         cookieService,
 	}, nil
 }

@@ -13,6 +13,7 @@ const maximumLoginAttemptsAllowed = 5
 
 type AuthenticationService interface {
 	Login(request *domain.LoginRequest) (*domain.User, *domain.Session, error)
+	Logout(session *domain.Session) error
 }
 
 func NewAuthenticationService(
@@ -129,4 +130,13 @@ func (s *authenticationService) createSessionForUser(user *domain.User) (*domain
 	}
 
 	return session, nil
+}
+
+func (s *authenticationService) Logout(session *domain.Session) error {
+	err := s.sessionRepository.DeleteByID(session.ID)
+	if err != nil {
+		log.Err(err).Str("session_id", session.ID.String()).Msg("error deleting session by id")
+		return fmt.Errorf("session data error: %w", err)
+	}
+	return nil
 }

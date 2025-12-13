@@ -55,13 +55,21 @@ func (s *Server) registerRoutes() {
 
 	// auth routes
 	authGroup.POST("/login", func(c echo.Context) error {
-		return handler.HandleLogin(c, s.container.AuthenticationService)
+		return handler.HandleLogin(c, s.container.AuthenticationService, s.container.CookieService)
 	})
 
 	// PROTECTED ROUTES
-	authMiddleware := mw.NewAuthMiddleware(s.container.SessionRepository, s.container.UserRepository)
+	authMiddleware := mw.NewAuthMiddleware(s.container.SessionRepository, s.container.UserRepository, s.container.CookieService)
+
 	protectedGroup := apiGroup.Group("")
 	protectedGroup.Use(authMiddleware.SessionAuth)
+
+	// logout route
+	authGroup.POST("/logout",
+		func(c echo.Context) error {
+			return handler.HandleLogout(c, s.container.AuthenticationService, s.container.CookieService)
+		},
+		authMiddleware.SessionAuth)
 
 	// Users Group
 	usersGroup := protectedGroup.Group("/users")

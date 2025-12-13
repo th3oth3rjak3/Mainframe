@@ -59,6 +59,19 @@ paths:
       summary: Login user
       tags:
       - Authentication
+  /api/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Log out of application
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      summary: Logout user
+      tags:
+      - Authentication
   /api/users:
     get:
       consumes:

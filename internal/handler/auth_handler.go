@@ -2,12 +2,15 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
 	"github.com/th3oth3rjak3/mainframe/internal/domain"
+	mw "github.com/th3oth3rjak3/mainframe/internal/middleware"
 	"github.com/th3oth3rjak3/mainframe/internal/services"
+	"github.com/th3oth3rjak3/mainframe/internal/shared"
 )
 
 // HandleLogin logs a user into the application.
@@ -23,12 +26,13 @@ import (
 func HandleLogin(
 	c echo.Context,
 	authService services.AuthenticationService,
+	cookieService services.CookieService,
 ) error {
 
 	var req domain.LoginRequest
 
 	if err := c.Bind(&req); err != nil {
-		return JsonError(c, "invalid request", nil, 400)
+		return shared.JsonError(c, "invalid request", nil, 400)
 	}
 
 	user, session, err := authService.Login(&req)
@@ -36,39 +40,54 @@ func HandleLogin(
 		return handleServiceErrors(c, err)
 	}
 
-	cookie := createHttpCookie(session)
-	c.SetCookie(cookie)
+	cookieService.SetCookie(c, session)
 
 	response := domain.NewLoginResponse(user)
 	return c.JSON(200, response)
 }
 
-func createHttpCookie(session *domain.Session) *http.Cookie {
-	cookie := new(http.Cookie)
-	cookie.Name = "session_id"
-	cookie.Value = session.ID.String()
-	cookie.Expires = session.ExpiresAt
-	cookie.Path = "/"
-	cookie.HttpOnly = true
-	cookie.Secure = true
-	cookie.SameSite = http.SameSiteStrictMode
+// HandleLogout logs a user out of the application.
+//
+// @Summary      Logout user
+// @Description  Log out of application
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Success      204
+// @Router       /api/auth/logout [post]
+func HandleLogout(
+	c echo.Context,
+	authService services.AuthenticationService,
+	cookieService services.CookieService,
+) error {
+	session, ok := c.Request().Context().Value(mw.SessionContextKey).(*domain.Session)
+	if !ok {
+		return handleServiceErrors(c, fmt.Errorf("could not get session from context"))
+	}
 
-	return cookie
+	if err := authService.Logout(session); err != nil {
+		return handleServiceErrors(c, err)
+	}
+
+	cookieService.ClearCookie(c)
+	c.NoContent(http.StatusNoContent)
+
+	return nil
 }
 
 func handleServiceErrors(c echo.Context, err error) error {
 	var validationError *services.ValidationError
 
 	if errors.As(err, &validationError) {
-		return JsonError(c, validationError.Message, validationError.Details, http.StatusBadRequest)
+		return shared.JsonError(c, validationError.Message, validationError.Details, http.StatusBadRequest)
 	}
 
 	if errors.Is(err, services.ErrUnauthorized) {
-		return JsonError(c, err.Error(), nil, http.StatusUnauthorized)
+		return shared.JsonError(c, err.Error(), nil, http.StatusUnauthorized)
 	}
 
 	if errors.Is(err, services.ErrForbidden) {
-		return JsonError(c, err.Error(), nil, http.StatusForbidden)
+		return shared.JsonError(c, err.Error(), nil, http.StatusForbidden)
 	}
 
 	log.Error().
@@ -77,5 +96,5 @@ func handleServiceErrors(c echo.Context, err error) error {
 		Str("request_id", c.Response().Header().Get(echo.HeaderXRequestID)).
 		Msg("Unhandled internal error caught by handler")
 
-	return InternalServerError(c)
+	return shared.InternalServerError(c)
 }

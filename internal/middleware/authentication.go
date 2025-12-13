@@ -7,8 +7,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/th3oth3rjak3/mainframe/internal/domain"
+	"github.com/rs/zerolog/log"
 	"github.com/th3oth3rjak3/mainframe/internal/repository"
+	"github.com/th3oth3rjak3/mainframe/internal/services"
+	"github.com/th3oth3rjak3/mainframe/internal/shared"
 )
 
 // A private key type to prevent collisions in context
@@ -17,104 +19,101 @@ type contextKey string
 // UserContextKey is the key used to store the user object in the request context.
 const UserContextKey = contextKey("user")
 
+// SessionContextKey is the key used to store the session object in the request context.
+const SessionContextKey = contextKey("session")
+
 // sessionDuration defines how long a session is valid for after the last activity.
 const sessionDuration = 2 * time.Hour
 
 // AuthMiddleware holds the dependencies for our authentication middleware.
 type AuthMiddleware struct {
-	sessionRepo repository.SessionRepository
-	userRepo    repository.UserRepository
+	sessionRepo   repository.SessionRepository
+	userRepo      repository.UserRepository
+	cookieService services.CookieService
 }
 
 // NewAuthMiddleware creates a new instance of our AuthMiddleware.
-func NewAuthMiddleware(sessionRepo repository.SessionRepository, userRepo repository.UserRepository) *AuthMiddleware {
+func NewAuthMiddleware(
+	sessionRepo repository.SessionRepository,
+	userRepo repository.UserRepository,
+	cookieService services.CookieService,
+) *AuthMiddleware {
 	return &AuthMiddleware{
-		sessionRepo: sessionRepo,
-		userRepo:    userRepo,
+		sessionRepo:   sessionRepo,
+		userRepo:      userRepo,
+		cookieService: cookieService,
 	}
 }
 
 // SessionAuth is the actual middleware function.
 func (m *AuthMiddleware) SessionAuth(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// 1. Check for the session cookie.
+		// Get the session cookie
 		cookie, err := c.Cookie("session_id")
 		if err != nil {
-			// If the cookie is not found, it's a standard unauthorized error.
-			return echo.NewHTTPError(http.StatusUnauthorized, "missing session cookie")
+			return shared.JsonError(c, "unauthorized", nil, http.StatusUnauthorized)
 		}
 		sessionIDString := cookie.Value
 		sessionID, err := uuid.Parse(sessionIDString)
 		if err != nil {
-			return echo.NewHTTPError(http.StatusUnauthorized, "session_id invalid format")
+			log.Err(err).
+				Str("session_id", sessionIDString).
+				Msg("could not parse session_id as a UUID")
+
+			return shared.JsonError(c, "unauthorized", nil, http.StatusUnauthorized)
 		}
 
-		// 2. Validate the session from the database.
+		// Find the session
 		session, err := m.sessionRepo.GetByID(sessionID)
 		if err != nil {
-			// This is a server error (e.g., DB down), not an auth failure.
-			return echo.NewHTTPError(http.StatusInternalServerError, "could not verify session")
+			log.Err(err).
+				Str("session_id", sessionID.String()).
+				Msg("failed to get session by id")
+
+			return shared.InternalServerError(c)
 		}
 
-		// 3. Check if session is found and not expired.
+		// deal with expired and not found sessions
 		if session == nil || session.ExpiresAt.Before(time.Now().UTC()) {
-			// If session is expired or not found, clear the bad cookie and deny access.
-			c.SetCookie(clearSessionCookie())
-			return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired session")
+			m.cookieService.ClearCookie(c)
+			return shared.JsonError(c, "unauthorized", nil, http.StatusUnauthorized)
 		}
 
-		// 4. Implement Sliding Window: Update the expiration time.
+		// Update sliding expiration window
 		newExpiration := time.Now().UTC().Add(sessionDuration)
 		session.ExpiresAt = newExpiration
 		if err := m.sessionRepo.Update(session); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "could not update session")
+			log.Err(err).
+				Str("session_id", sessionID.String()).
+				Msg("failed to update session in the database")
+
+			return shared.InternalServerError(c)
 		}
 
 		// Create and set a new cookie with the updated expiration.
-		newCookie := createHttpCookie(session)
-		c.SetCookie(newCookie)
+		m.cookieService.SetCookie(c, session)
 
-		// 5. Fetch the user associated with the valid session.
+		// Fetch the user associated with the valid session.
 		user, err := m.userRepo.GetByID(session.UserID)
 		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "could not fetch user")
-		}
-		if user == nil {
-			// This is an edge case: the session is valid but the user was deleted.
-			return echo.NewHTTPError(http.StatusUnauthorized, "user for session not found")
+			log.Err(err).
+				Str("session_id", sessionID.String()).
+				Str("user_id", session.UserID.String()).
+				Msg("failed to get user by id")
+
+			return shared.InternalServerError(c)
 		}
 
-		// 6. Attach the user object to the context for downstream handlers.
+		if user == nil {
+			return shared.JsonError(c, "unauthorized", nil, http.StatusUnauthorized)
+		}
+
+		// Attach the user object to the context for downstream handlers.
 		ctx := context.WithValue(c.Request().Context(), UserContextKey, user)
+		ctx = context.WithValue(ctx, SessionContextKey, session)
 		c.SetRequest(c.Request().WithContext(ctx))
 
-		// 7. Proceed to the next handler in the chain.
+		// Proceed to the next handler in the chain.
 		return next(c)
 	}
-}
-
-// Helper function to create a session cookie.
-func createHttpCookie(session *domain.Session) *http.Cookie {
-	cookie := new(http.Cookie)
-	cookie.Name = "session_id"
-	cookie.Value = session.ID.String()
-	cookie.Expires = session.ExpiresAt
-	cookie.Path = "/"
-	cookie.HttpOnly = true
-	cookie.Secure = true // For production
-	cookie.SameSite = http.SameSiteStrictMode
-	return cookie
-}
-
-// Helper function to create a cookie that clears the session from the browser.
-func clearSessionCookie() *http.Cookie {
-	cookie := new(http.Cookie)
-	cookie.Name = "session_id"
-	cookie.Value = ""
-	cookie.Expires = time.Unix(0, 0) // Set to a time in the past
-	cookie.Path = "/"
-	cookie.HttpOnly = true
-	cookie.Secure = true
-	cookie.SameSite = http.SameSiteStrictMode
-	return cookie
 }

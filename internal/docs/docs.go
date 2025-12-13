@@ -49,6 +49,26 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/auth/logout": {
+            "post": {
+                "description": "Log out of application",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Logout user",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/api/users": {
             "get": {
                 "description": "Get all users",
