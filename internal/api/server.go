@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -41,6 +42,10 @@ func NewServer(container *ServiceContainer, hmacKey string) *Server {
 // Start runs the HTTP server on the given address.
 func (s *Server) Start(addr string) error {
 	return s.router.Start(addr)
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.router.Shutdown(ctx)
 }
 
 // registerRoutes sets up all the HTTP routes for the application.

@@ -1,13 +1,19 @@
 package main
 
 import (
+	"context"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog/log"
 	"github.com/th3oth3rjak3/mainframe/internal/api"
 	"github.com/th3oth3rjak3/mainframe/internal/data"
 	_ "github.com/th3oth3rjak3/mainframe/internal/logger"
+	"github.com/th3oth3rjak3/mainframe/internal/services"
 )
 
 // @title           Mainframe API
@@ -36,6 +42,29 @@ func main() {
 	}
 
 	server := api.NewServer(container, serverKey)
-	err = server.Start(":8080")
-	log.Fatal().Err(err).Msg("shutting down")
+
+	sessionCleanupService := services.NewSessionCleanupService(db)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		if err = server.Start(":8080"); err != nil && err != http.ErrServerClosed {
+			log.Fatal().Err(err).Msg("shutdown error occurred")
+		}
+	}()
+
+	go services.RunSessionCleanupJob(ctx, sessionCleanupService)
+
+	// Wait for SIGINT/SIGTERM
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	// Trigger worker shutdown
+	cancel()
+
+	// Gracefully shut down Echo
+	ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelShutdown()
+	_ = server.Shutdown(ctxShutdown)
 }
