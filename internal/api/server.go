@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"embed"
+	"net/http"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -19,8 +21,9 @@ type Server struct {
 }
 
 // NewServer creates a new Server instance and configures its routes.
-func NewServer(container *ServiceContainer, hmacKey string) *Server {
+func NewServer(container *ServiceContainer, hmacKey string, webAssets embed.FS) *Server {
 	e := echo.New()
+
 	// Create the server instance
 	s := &Server{
 		container: container,
@@ -32,6 +35,13 @@ func NewServer(container *ServiceContainer, hmacKey string) *Server {
 	s.router.Use(mw.ZerologRequestLogger())
 	s.router.Use(middleware.Recover())
 	s.router.Use(middleware.ContextTimeout(60 * time.Second))
+
+	// serve static spa assets
+	s.router.Use(middleware.StaticWithConfig(middleware.StaticConfig{
+		HTML5:      true,
+		Root:       "web", // because files are located in `web` directory in `webAssets` fs
+		Filesystem: http.FS(webAssets),
+	}))
 
 	// Register routes
 	s.registerRoutes()

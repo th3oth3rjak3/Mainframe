@@ -1,14 +1,16 @@
-import { ThemeProvider } from "./components/theme-provider";
+import { ThemeProvider } from "./components/providers/theme-provider";
 import { Route, Routes } from "react-router-dom";
-import Layout from "@/layout";
-import Home from "@/components/home";
+import Layout from "@/components/layout/layout";
+import { Toaster } from "sonner";
+import Dashboard from "@/pages/dashboard";
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <Toaster richColors />
       <Layout>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Dashboard />} />
         </Routes>
       </Layout>
     </ThemeProvider>

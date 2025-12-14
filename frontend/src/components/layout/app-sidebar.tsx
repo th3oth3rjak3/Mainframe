@@ -19,6 +19,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ModeToggle } from "./mode-toggle";
+import { useAuthStore } from "@/features/auth/authStore";
+import { toast } from "sonner";
 
 // Menu items.
 const items = [
@@ -54,6 +56,21 @@ type AppSidebarProps = {
 };
 
 export default function AppSidebar({ variant }: AppSidebarProps) {
+  const signOut = useAuthStore((state) => state.signOut);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Signed out successfully");
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error(`Failed to sign out: ${error.message}`);
+      } else {
+        toast.error("Failed to sign out");
+      }
+    }
+  };
+
   return (
     <Sidebar variant={variant}>
       <SidebarContent>
@@ -94,7 +111,7 @@ export default function AppSidebar({ variant }: AppSidebarProps) {
                 <DropdownMenuItem>
                   <span>Billing</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>
                   <span>Sign out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>

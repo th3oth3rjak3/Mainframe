@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,6 +16,9 @@ import (
 	_ "github.com/th3oth3rjak3/mainframe/internal/logger"
 	"github.com/th3oth3rjak3/mainframe/internal/services"
 )
+
+//go:embed web
+var webAssets embed.FS
 
 // @title           Mainframe API
 // @version         1.0
@@ -41,7 +45,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to initialize service container")
 	}
 
-	server := api.NewServer(container, serverKey)
+	server := api.NewServer(container, serverKey, webAssets)
 
 	sessionCleanupService := services.NewSessionCleanupService(db)
 	ctx, cancel := context.WithCancel(context.Background())

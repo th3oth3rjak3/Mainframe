@@ -1,7 +1,7 @@
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
-import AppSidebar from "@/components/app-sidebar";
-import { AppBar } from "@/components/appbar";
+import AppSidebar from "@/components/layout/app-sidebar";
+import { AppBar } from "@/components/layout/appbar";
 
 type LayoutProps = {
   children: React.ReactNode;
