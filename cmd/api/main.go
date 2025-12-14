@@ -33,7 +33,6 @@ func main() {
 
 	serverKey := os.Getenv("SERVER_KEY")
 
-	// Initialize database
 	db, err := data.InitDB()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to database")
@@ -48,27 +47,29 @@ func main() {
 	server := api.NewServer(container, serverKey, webAssets)
 
 	sessionCleanupService := services.NewSessionCleanupService(db)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+
+	// 🔑 ONE root context tied to OS signals
+	ctx, stop := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+	defer stop()
 
 	go func() {
-		if err = server.Start(":8080"); err != nil && err != http.ErrServerClosed {
+		if err := server.Start(":8080"); err != nil && err != http.ErrServerClosed {
 			log.Fatal().Err(err).Msg("shutdown error occurred")
 		}
 	}()
 
 	go services.RunSessionCleanupJob(ctx, sessionCleanupService)
 
-	// Wait for SIGINT/SIGTERM
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
+	// ⛔ Block until shutdown signal
+	<-ctx.Done()
+	log.Info().Msg("shutdown signal received")
 
-	// Trigger worker shutdown
-	cancel()
-
-	// Gracefully shut down Echo
-	ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancelShutdown()
+	// Graceful server shutdown
+	ctxShutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	_ = server.Shutdown(ctxShutdown)
 }

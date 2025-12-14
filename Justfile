@@ -3,7 +3,7 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 set shell := ["sh", "-c"]
 
 # Default task.
-default: dev
+default: watch
 
 # --- DATABASE MIGRATIONS ------------------------------------------------------
 # Create a new goose SQL migration:
@@ -55,8 +55,8 @@ build-hmac-win:
     go build -o bin/hmac_key.exe ./cmd/hmac_key
 
 # Run the API in dev mode:
-dev: swag
-    go run ./cmd/api/main.go
+watch:
+    gowatch -o ./bin/mainframe -p ./cmd/api
 
 # Build and run the compiled API binary (avoids go run):
 run: swag build
