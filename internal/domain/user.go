@@ -73,3 +73,35 @@ func (u *User) HasRole(name string) bool {
 		return strings.EqualFold(r.Name, name)
 	})
 }
+
+type UserRead struct {
+	ID                     uuid.UUID  `json:"id"`
+	Username               string     `json:"username"`
+	Email                  string     `json:"email"`
+	FirstName              string     `json:"firstName"`
+	LastName               string     `json:"lastName"`
+	LastLogin              *time.Time `json:"lastLogin"`
+	FailedLoginAttempts    uint       `json:"failedLoginAttempts"`
+	LastFailedLoginAttempt *time.Time `json:"lastFailedLoginAttempt"`
+	IsDisabled             bool       `json:"isDisabled"`
+	CreatedAt              time.Time  `json:"createdAt"`
+	UpdatedAt              time.Time  `json:"updatedAt"`
+	Roles                  []Role     `json:"roles"`
+}
+
+func NewUserRead(user *User) UserRead {
+	return UserRead{
+		ID:                     user.ID,
+		Username:               user.Username,
+		Email:                  user.Email,
+		FirstName:              user.FirstName,
+		LastName:               user.LastName,
+		LastLogin:              user.LastLogin,
+		FailedLoginAttempts:    user.FailedLoginAttempts,
+		LastFailedLoginAttempt: user.LastFailedLoginAttempt,
+		IsDisabled:             user.IsDisabled,
+		CreatedAt:              user.CreatedAt,
+		UpdatedAt:              user.UpdatedAt,
+		Roles:                  user.Roles,
+	}
+}

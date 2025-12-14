@@ -77,6 +77,8 @@ func (s *Server) registerRoutes() {
 	protectedGroup := apiGroup.Group("")
 	protectedGroup.Use(authMiddleware.SessionAuth)
 
+	adminRoleRequired := mw.RequireRole(domain.Administrator)
+
 	// logout route
 	authGroup.POST("/logout",
 		func(c echo.Context) error {
@@ -85,11 +87,13 @@ func (s *Server) registerRoutes() {
 		authMiddleware.SessionAuth)
 
 	// Users Group
-	usersGroup := protectedGroup.Group("/users", mw.RequireRole(domain.Administrator))
-	usersGroup.GET("", handler.HandleListUsers)
+	usersGroup := protectedGroup.Group("/users", adminRoleRequired)
+	usersGroup.GET("", func(c echo.Context) error {
+		return handler.HandleListUsers(c, s.container.UserService)
+	})
 
 	// Roles group
-	rolesGroup := protectedGroup.Group("/roles", mw.RequireRole(domain.Administrator))
+	rolesGroup := protectedGroup.Group("/roles", adminRoleRequired)
 	rolesGroup.GET("", func(c echo.Context) error {
 		return handler.HandleListRoles(c, s.container.RoleService)
 	})

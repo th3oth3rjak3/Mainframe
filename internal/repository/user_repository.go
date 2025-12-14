@@ -17,6 +17,13 @@ type UserRepository interface {
 	// Fetch a user by Username
 	GetByUsername(username string) (*domain.User, error)
 
+	// Get all users.
+	//
+	// There are never expected to be more than 25 users since
+	// this is a local application. If that changes, we can
+	// rewrite this to produce paged results.
+	GetAll() ([]domain.User, error)
+
 	// Create a new user.
 	Create(user *domain.User) error
 
@@ -92,6 +99,34 @@ func (r *sqliteUserRepository) GetByUsername(username string) (*domain.User, err
 	user.Roles = roles
 
 	return &user, nil
+}
+
+func (r *sqliteUserRepository) GetAll() ([]domain.User, error) {
+	var users []domain.User
+
+	query := `
+		SELECT id, username, email, first_name, last_name, 
+			last_login, failed_login_attempts, last_failed_login_attempt, 
+			is_disabled, created_at, updated_at
+		FROM users
+	`
+
+	err := r.db.Select(&users, query)
+	if err != nil {
+		return nil, err
+	}
+
+	for idx, user := range users {
+		roles, err := r.getRolesForUser(user.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		user.Roles = roles
+		users[idx] = user
+	}
+
+	return users, nil
 }
 
 func (r *sqliteUserRepository) Create(user *domain.User) error {
