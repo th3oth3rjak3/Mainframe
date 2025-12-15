@@ -119,6 +119,41 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "description": "Create a new application user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Create User",
+                "parameters": [
+                    {
+                        "description": "New User",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.UserCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
             }
         },
         "/api/users/:id": {
@@ -223,6 +258,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.UserCreate": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "firstName": {
+                    "type": "string"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "username": {
                     "type": "string"
                 }
             }

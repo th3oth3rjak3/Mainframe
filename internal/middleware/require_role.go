@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"net/http"
+	"fmt"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
@@ -14,8 +14,7 @@ func RequireRole(roleName string) func(echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			user, ok := c.Request().Context().Value(UserContextKey).(*domain.User)
 			if !ok || user == nil {
-				log.Error().Msg("user missing from context where expected in require role middleware")
-				return shared.InternalServerError(c)
+				return fmt.Errorf("user expected in context but was not found")
 			}
 
 			if !user.HasRole(roleName) {
@@ -23,8 +22,7 @@ func RequireRole(roleName string) func(echo.HandlerFunc) echo.HandlerFunc {
 					Str("user_id", user.ID.String()).
 					Str("path", c.Request().URL.Path).
 					Msg("user attempting to access forbidden resources")
-
-				return shared.JsonError(c, "forbidden", nil, http.StatusForbidden)
+				return shared.ErrForbidden
 			}
 
 			return next(c)

@@ -1,8 +1,10 @@
 package domain
 
 import (
-	"strings"
 	"time"
+
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	v "github.com/th3oth3rjak3/mainframe/internal/validation"
 )
 
 // LoginRequest represents login credentials
@@ -11,18 +13,12 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-func (lr *LoginRequest) Validate() []string {
-	var errs []string
-
-	if strings.TrimSpace(lr.Username) == "" {
-		errs = append(errs, "username is required")
-	}
-
-	if strings.TrimSpace(lr.Password) == "" {
-		errs = append(errs, "password is required")
-	}
-
-	return errs
+func (r *LoginRequest) Validate() error {
+	return validation.ValidateStruct(
+		r,
+		validation.Field(&r.Username, validation.Required, validation.Length(3, 50)),
+		validation.Field(&r.Password, validation.Required, validation.Length(8, 100), v.StrongPassword()),
+	)
 }
 
 // LoginResponse represents the login response

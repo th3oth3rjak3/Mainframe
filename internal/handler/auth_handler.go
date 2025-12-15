@@ -1,12 +1,10 @@
 package handler
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
 	"github.com/th3oth3rjak3/mainframe/internal/domain"
 	mw "github.com/th3oth3rjak3/mainframe/internal/middleware"
 	"github.com/th3oth3rjak3/mainframe/internal/services"
@@ -32,12 +30,16 @@ func HandleLogin(
 	var req domain.LoginRequest
 
 	if err := c.Bind(&req); err != nil {
-		return shared.JsonError(c, "invalid request", nil, 400)
+		return fmt.Errorf("the request body is malformed or invalid: %w", shared.ErrBadRequest)
+	}
+
+	if err := req.Validate(); err != nil {
+		return err
 	}
 
 	result, err := authService.Login(&req)
 	if err != nil {
-		return handleAuthServiceErrors(c, err)
+		return err
 	}
 
 	cookieService.SetCookie(c, result.Session, result.RawSessionToken)
@@ -62,39 +64,15 @@ func HandleLogout(
 ) error {
 	session, ok := c.Request().Context().Value(mw.SessionContextKey).(*domain.Session)
 	if !ok {
-		return handleAuthServiceErrors(c, fmt.Errorf("could not get session from context"))
+		return fmt.Errorf("could not get session from context")
 	}
 
 	if err := authService.Logout(session); err != nil {
-		return handleAuthServiceErrors(c, err)
+		return err
 	}
 
 	cookieService.ClearCookie(c)
 	c.NoContent(http.StatusNoContent)
 
 	return nil
-}
-
-func handleAuthServiceErrors(c echo.Context, err error) error {
-	var validationError *services.ValidationError
-
-	if errors.As(err, &validationError) {
-		return shared.JsonError(c, validationError.Message, validationError.Details, http.StatusBadRequest)
-	}
-
-	if errors.Is(err, services.ErrUnauthorized) {
-		return shared.JsonError(c, err.Error(), nil, http.StatusUnauthorized)
-	}
-
-	if errors.Is(err, services.ErrForbidden) {
-		return shared.JsonError(c, err.Error(), nil, http.StatusForbidden)
-	}
-
-	log.Error().
-		Err(err).
-		Str("path", c.Path()).
-		Str("request_id", c.Response().Header().Get(echo.HeaderXRequestID)).
-		Msg("Unhandled internal error caught by handler")
-
-	return shared.InternalServerError(c)
 }

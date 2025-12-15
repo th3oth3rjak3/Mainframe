@@ -2,12 +2,10 @@ package middleware
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
 	"github.com/th3oth3rjak3/mainframe/internal/crypto"
 	"github.com/th3oth3rjak3/mainframe/internal/repository"
 	"github.com/th3oth3rjak3/mainframe/internal/services"
@@ -55,58 +53,43 @@ func (m *AuthMiddleware) SessionAuth(next echo.HandlerFunc) echo.HandlerFunc {
 		// Get the session cookie
 		cookie, err := c.Cookie("session_id")
 		if err != nil {
-			return shared.JsonError(c, "unauthorized", nil, http.StatusUnauthorized)
+			return shared.ErrUnauthorized
 		}
 
 		sessionIDString, rawToken, err := m.cookieService.ParseSessionCookie(cookie)
 		if err != nil {
-			log.Err(err).
-				Msg("couldn't parse the session cookie")
-
-			return shared.InternalServerError(c)
+			return shared.ErrUnauthorized
 		}
 
 		sessionID, err := uuid.Parse(sessionIDString)
 		if err != nil {
-			log.Err(err).
-				Str("session_id", sessionIDString).
-				Msg("could not parse session_id as a UUID")
-
-			return shared.JsonError(c, "unauthorized", nil, http.StatusUnauthorized)
+			return shared.ErrUnauthorized
 		}
 
 		// Find the session
 		session, err := m.sessionRepo.GetByID(sessionID)
 		if err != nil {
-			log.Err(err).
-				Str("session_id", sessionID.String()).
-				Msg("failed to get session by id")
-
-			return shared.InternalServerError(c)
+			return err
 		}
 
 		// Compare the raw token with the hash value
 		valid := crypto.VerifyVerifier(rawToken, []byte(m.hmacKey), session.Token)
 		if !valid {
 			m.cookieService.ClearCookie(c)
-			return shared.JsonError(c, "unauthorized", nil, http.StatusUnauthorized)
+			return shared.ErrUnauthorized
 		}
 
 		// deal with expired and not found sessions
 		if session == nil || session.ExpiresAt.Before(time.Now().UTC()) {
 			m.cookieService.ClearCookie(c)
-			return shared.JsonError(c, "unauthorized", nil, http.StatusUnauthorized)
+			return shared.ErrUnauthorized
 		}
 
 		// Update sliding expiration window
 		newExpiration := time.Now().UTC().Add(sessionDuration)
 		session.ExpiresAt = newExpiration
 		if err := m.sessionRepo.Update(session); err != nil {
-			log.Err(err).
-				Str("session_id", sessionID.String()).
-				Msg("failed to update session in the database")
-
-			return shared.InternalServerError(c)
+			return err
 		}
 
 		// Create and set a new cookie with the updated expiration.
@@ -115,16 +98,11 @@ func (m *AuthMiddleware) SessionAuth(next echo.HandlerFunc) echo.HandlerFunc {
 		// Fetch the user associated with the valid session.
 		user, err := m.userRepo.GetByID(session.UserID)
 		if err != nil {
-			log.Err(err).
-				Str("session_id", sessionID.String()).
-				Str("user_id", session.UserID.String()).
-				Msg("failed to get user by id")
-
-			return shared.InternalServerError(c)
+			return err
 		}
 
 		if user == nil {
-			return shared.JsonError(c, "unauthorized", nil, http.StatusUnauthorized)
+			return shared.ErrUnauthorized
 		}
 
 		// Attach the user object to the context for downstream handlers.

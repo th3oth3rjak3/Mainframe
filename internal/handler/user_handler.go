@@ -1,12 +1,12 @@
 package handler
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
+	"github.com/th3oth3rjak3/mainframe/internal/domain"
 	"github.com/th3oth3rjak3/mainframe/internal/services"
 	"github.com/th3oth3rjak3/mainframe/internal/shared"
 )
@@ -23,12 +23,12 @@ import (
 func HandleListUsers(c echo.Context, userService services.UserService) error {
 	user, err := getUserFromContext(c)
 	if err != nil {
-		return handleUserServiceErrors(c, err)
+		return err
 	}
 
 	users, err := userService.GetAll(user)
 	if err != nil {
-		return handleUserServiceErrors(c, err)
+		return err
 	}
 
 	return c.JSON(http.StatusOK, users)
@@ -47,44 +47,58 @@ func HandleListUsers(c echo.Context, userService services.UserService) error {
 func HandleGetUserByID(c echo.Context, userService services.UserService) error {
 	user, err := getUserFromContext(c)
 	if err != nil {
-		return handleUserServiceErrors(c, err)
+		return err
 	}
 
 	idString := c.Param("id")
 	userID, err := uuid.Parse(idString)
 
 	if err != nil {
-		return handleUserServiceErrors(c, err)
+		return fmt.Errorf("the id parameter was malformed or invalid: %w", shared.ErrBadRequest)
 	}
 
 	foundUser, err := userService.GetByID(user, userID)
 	if err != nil {
-		return handleUserServiceErrors(c, err)
+		return err
 	}
 
 	return c.JSON(http.StatusOK, foundUser)
 }
 
-func handleUserServiceErrors(c echo.Context, err error) error {
-	var validationError *services.ValidationError
-
-	if errors.As(err, &validationError) {
-		return shared.JsonError(c, validationError.Message, validationError.Details, http.StatusBadRequest)
+// HandleCreateUser creates a new user.
+//
+// @Summary      Create User
+// @Description  Create a new application user
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} map[string]string
+// @Param        request body domain.UserCreate true "New User"
+// @Router       /api/users [post]
+func HandleCreateUser(c echo.Context, userService services.UserService) error {
+	user, err := getUserFromContext(c)
+	if err != nil {
+		return err
 	}
 
-	if errors.Is(err, services.ErrUnauthorized) {
-		return shared.JsonError(c, err.Error(), nil, http.StatusUnauthorized)
+	var request domain.UserCreate
+
+	err = c.Bind(&request)
+	if err != nil {
+		return fmt.Errorf("the request body is malformed or invalid: %w", shared.ErrBadRequest)
 	}
 
-	if errors.Is(err, services.ErrForbidden) {
-		return shared.JsonError(c, err.Error(), nil, http.StatusForbidden)
+	err = request.Validate()
+	if err != nil {
+		return err
 	}
 
-	log.Error().
-		Err(err).
-		Str("path", c.Path()).
-		Str("request_id", c.Response().Header().Get(echo.HeaderXRequestID)).
-		Msg("Unhandled internal error caught by handler")
+	id, err := userService.Create(user, request)
+	if err != nil {
+		return err
+	}
 
-	return shared.InternalServerError(c)
+	locationUrl := fmt.Sprintf("api/users/%s", id)
+	c.Response().Header().Set("Location", locationUrl)
+	return c.JSON(http.StatusCreated, map[string]string{"id": id.String()})
 }

@@ -5,24 +5,11 @@ import (
 	"strings"
 	"time"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/google/uuid"
+	v "github.com/th3oth3rjak3/mainframe/internal/validation"
 )
-
-type UserCreate struct {
-	FirstName string `json:"firstName"`
-	LastName  string `json:"lastName"`
-	Email     string `json:"email"`
-	Username  string `json:"username"`
-	Password  string `json:"password"`
-}
-
-type UserUpdate struct {
-	FirstName string `json:"firstName"`
-	LastName  string `json:"lastName"`
-	Email     string `json:"email"`
-	Username  string `json:"username"`
-	Password  string `json:"password"`
-}
 
 type User struct {
 	ID                     uuid.UUID  `db:"id"`
@@ -104,4 +91,30 @@ func NewUserRead(user *User) UserRead {
 		UpdatedAt:              user.UpdatedAt,
 		Roles:                  user.Roles,
 	}
+}
+
+type UserCreate struct {
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Email     string `json:"email"`
+	Username  string `json:"username"`
+	Password  string `json:"password"`
+}
+
+func (u *UserCreate) Validate() error {
+	return validation.ValidateStruct(
+		u,
+		validation.Field(&u.FirstName, validation.Required, validation.Length(1, 100), is.Alpha),
+		validation.Field(&u.LastName, validation.Required, validation.Length(1, 100), is.Alpha),
+		validation.Field(&u.Email, validation.Required, is.Email),
+		validation.Field(&u.Username, validation.Required, validation.Length(3, 50)),
+		validation.Field(&u.Password, v.StrongPassword()),
+	)
+}
+
+type UserUpdate struct {
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Email     string `json:"email"`
+	Username  string `json:"username"`
 }

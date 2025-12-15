@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 	"github.com/th3oth3rjak3/mainframe/internal/domain"
 	"github.com/th3oth3rjak3/mainframe/internal/repository"
+	"github.com/th3oth3rjak3/mainframe/internal/shared"
 )
 
 type UserService interface {
@@ -21,32 +21,38 @@ type UserService interface {
 	// The supplied user must have the correct role to access this
 	// protected resource.
 	GetByID(user *domain.User, userID uuid.UUID) (*domain.UserRead, error)
+
+	// Create makes a new user from the provided request. The ID of the new
+	// user will be returned upon success.
+	Create(user *domain.User, request domain.UserCreate) (uuid.UUID, error)
 }
 
 func NewUserService(
 	userRepository repository.UserRepository,
+	roleRepository repository.RoleRepository,
 	pwHasher domain.PasswordHasher,
 ) UserService {
 	return &userService{
 		userRepository: userRepository,
+		roleRepository: roleRepository,
 		passwordHasher: pwHasher,
 	}
 }
 
 type userService struct {
 	userRepository repository.UserRepository
+	roleRepository repository.RoleRepository
 	passwordHasher domain.PasswordHasher
 }
 
 func (s *userService) GetAll(user *domain.User) ([]domain.UserRead, error) {
-	if !user.HasRole(domain.Administrator) {
-		return nil, ErrForbidden
+	if user == nil || !user.HasRole(domain.Administrator) {
+		return nil, shared.ErrForbidden
 	}
 
 	users, err := s.userRepository.GetAll()
 	if err != nil {
-		log.Err(err).Msg("user repository error while getting all users")
-		return nil, fmt.Errorf("user repository error: %w", err)
+		return nil, fmt.Errorf("failed to get all users: %w", err)
 	}
 
 	userList := make([]domain.UserRead, len(users))
@@ -60,18 +66,56 @@ func (s *userService) GetAll(user *domain.User) ([]domain.UserRead, error) {
 
 func (s *userService) GetByID(user *domain.User, userID uuid.UUID) (*domain.UserRead, error) {
 	if user == nil || !user.HasRole(domain.Administrator) {
-		return nil, ErrForbidden
+		return nil, shared.ErrForbidden
 	}
 
 	foundUser, err := s.userRepository.GetByID(userID)
 	if err != nil {
-		log.Err(err).
-			Str("user_ID", userID.String()).
-			Msg("repository error getting by id")
-
-		return nil, fmt.Errorf("user repository error: %w", err)
+		return nil, fmt.Errorf("failed to get user by ID: %w", err)
 	}
 
 	userRead := domain.NewUserRead(foundUser)
 	return &userRead, nil
+}
+
+func (s *userService) Create(user *domain.User, request domain.UserCreate) (uuid.UUID, error) {
+	if user == nil || !user.HasRole(domain.Administrator) {
+		return uuid.UUID{}, shared.ErrForbidden
+	}
+
+	// Ensure the unique username constraint in the database is not violated
+	existing, err := s.userRepository.GetByUsername(request.Username)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	if existing != nil {
+		return uuid.UUID{}, shared.ErrUsernameTaken
+	}
+
+	pwHash, err := s.passwordHasher.HashPassword(request.Password)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	roles := make([]domain.Role, 1)
+
+	role, err := s.roleRepository.GetByName(domain.BasicUser)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	roles[0] = *role
+
+	newUser, err := domain.NewUser(request.Username, request.Email, request.FirstName, request.LastName, pwHash, roles)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	err = s.userRepository.Create(newUser)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	return newUser.ID, nil
 }

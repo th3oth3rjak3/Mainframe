@@ -3,14 +3,17 @@ package api
 import (
 	"context"
 	"embed"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/rs/zerolog/log"
 	"github.com/th3oth3rjak3/mainframe/internal/domain"
 	"github.com/th3oth3rjak3/mainframe/internal/handler"
 	mw "github.com/th3oth3rjak3/mainframe/internal/middleware"
+	"github.com/th3oth3rjak3/mainframe/internal/shared"
 )
 
 // Server holds the dependencies for the HTTP server.
@@ -30,6 +33,8 @@ func NewServer(container *ServiceContainer, hmacKey string, webAssets embed.FS) 
 		router:    e,
 		hmacKey:   hmacKey,
 	}
+
+	s.router.HTTPErrorHandler = CustomHTTPErrorHandler
 
 	// Attach middleware
 	s.router.Use(mw.ZerologRequestLogger())
@@ -104,10 +109,33 @@ func (s *Server) registerRoutes() {
 	usersGroup.GET("/:id", func(c echo.Context) error {
 		return handler.HandleGetUserByID(c, s.container.UserService)
 	})
+	usersGroup.POST("", func(c echo.Context) error {
+		return handler.HandleCreateUser(c, s.container.UserService)
+	})
 
 	// Roles group
 	rolesGroup := protectedGroup.Group("/roles", adminRoleRequired)
 	rolesGroup.GET("", func(c echo.Context) error {
 		return handler.HandleListRoles(c, s.container.RoleService)
 	})
+}
+
+func CustomHTTPErrorHandler(err error, c echo.Context) {
+	// We've received an error. Ask the resolver what to do.
+	status, message := shared.ResolveError(err)
+
+	// If it's a 500, we should log the stack trace here.
+	if status == http.StatusInternalServerError {
+		log.Error().
+			Stack().
+			Err(err).
+			Str("path", c.Path()).
+			Msg("Unhandled internal server error")
+	}
+
+	// Send the final, correct response.
+	// Use a new error object for the JSON response to avoid sending wrapped details.
+	if !c.Response().Committed {
+		shared.JsonError(c, errors.New(message), status)
+	}
 }

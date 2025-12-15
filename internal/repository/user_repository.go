@@ -130,12 +130,19 @@ func (r *sqliteUserRepository) GetAll() ([]domain.User, error) {
 }
 
 func (r *sqliteUserRepository) Create(user *domain.User) error {
+	tx, err := r.db.Beginx()
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+
+	defer tx.Rollback()
+
 	query := `
 		INSERT INTO users (id, username, email, first_name, last_name, password_hash)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`
 
-	result, err := r.db.Exec(query, user.ID, user.Username, user.Email, user.FirstName, user.LastName, user.PasswordHash)
+	result, err := tx.Exec(query, user.ID, user.Username, user.Email, user.FirstName, user.LastName, user.PasswordHash)
 	if err != nil {
 		return err
 	}
@@ -149,7 +156,24 @@ func (r *sqliteUserRepository) Create(user *domain.User) error {
 		return fmt.Errorf("expected to create 1 new user row, but rows affected was %d", rows)
 	}
 
-	return nil
+	for _, role := range user.Roles {
+		query := "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)"
+		result, err := tx.Exec(query, user.ID, role.ID)
+		if err != nil {
+			return err
+		}
+
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+
+		if affected != 1 {
+			return fmt.Errorf("expected to create 1 new user role, but affected was %d", affected)
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (r *sqliteUserRepository) UpdateBasic(user *domain.User) error {

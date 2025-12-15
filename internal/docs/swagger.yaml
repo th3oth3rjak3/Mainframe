@@ -32,6 +32,19 @@ definitions:
       name:
         type: string
     type: object
+  domain.UserCreate:
+    properties:
+      email:
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    type: object
   domain.UserRead:
     properties:
       createdAt:
@@ -140,6 +153,29 @@ paths:
               $ref: '#/definitions/domain.UserRead'
             type: array
       summary: List Users
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Create a new application user
+      parameters:
+      - description: New User
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UserCreate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create User
       tags:
       - Users
   /api/users/:id:

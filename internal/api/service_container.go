@@ -36,7 +36,7 @@ func NewServiceContainer(db *sqlx.DB, hmacKey string) (*ServiceContainer, error)
 	roleRepo := repository.NewRoleRepository(db)
 
 	// Services
-	userService := services.NewUserService(userRepo, pwHasher)
+	userService := services.NewUserService(userRepo, roleRepo, pwHasher)
 	authService := services.NewAuthenticationService(userRepo, sessionRepo, pwHasher, hmacKey)
 	cookieService := services.NewCookieService()
 	roleService := services.NewRoleService(roleRepo)

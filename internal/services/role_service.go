@@ -3,6 +3,7 @@ package services
 import (
 	"github.com/th3oth3rjak3/mainframe/internal/domain"
 	"github.com/th3oth3rjak3/mainframe/internal/repository"
+	"github.com/th3oth3rjak3/mainframe/internal/shared"
 )
 
 type RoleService interface {
@@ -19,7 +20,7 @@ func NewRoleService(roleRepository repository.RoleRepository) RoleService {
 
 func (r *roleService) GetAllRoles(user *domain.User) ([]domain.Role, error) {
 	if !user.HasRole(domain.Administrator) {
-		return nil, ErrForbidden
+		return nil, shared.ErrForbidden
 	}
 
 	return r.roleRepository.GetAll()
