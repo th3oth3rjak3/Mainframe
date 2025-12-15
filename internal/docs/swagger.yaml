@@ -32,6 +32,35 @@ definitions:
       name:
         type: string
     type: object
+  domain.UserRead:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      failedLoginAttempts:
+        type: integer
+      firstName:
+        type: string
+      id:
+        type: string
+      isDisabled:
+        type: boolean
+      lastFailedLoginAttempt:
+        type: string
+      lastLogin:
+        type: string
+      lastName:
+        type: string
+      roles:
+        items:
+          $ref: '#/definitions/domain.Role'
+        type: array
+      updatedAt:
+        type: string
+      username:
+        type: string
+    type: object
   handler.HealthCheckResponse:
     properties:
       status:
@@ -107,8 +136,31 @@ paths:
         "200":
           description: OK
           schema:
-            type: string
+            items:
+              $ref: '#/definitions/domain.UserRead'
+            type: array
       summary: List Users
+      tags:
+      - Users
+  /api/users/:id:
+    get:
+      consumes:
+      - application/json
+      description: Get one user by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.UserRead'
+      summary: Get User
       tags:
       - Users
   /health:

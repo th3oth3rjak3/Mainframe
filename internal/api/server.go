@@ -101,6 +101,9 @@ func (s *Server) registerRoutes() {
 	usersGroup.GET("", func(c echo.Context) error {
 		return handler.HandleListUsers(c, s.container.UserService)
 	})
+	usersGroup.GET("/:id", func(c echo.Context) error {
+		return handler.HandleGetUserByID(c, s.container.UserService)
+	})
 
 	// Roles group
 	rolesGroup := protectedGroup.Group("/roles", adminRoleRequired)

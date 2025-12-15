@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -32,6 +33,12 @@ func main() {
 	}
 
 	serverKey := os.Getenv("SERVER_KEY")
+
+	if strings.EqualFold(serverKey, "") {
+		log.Fatal().
+			Str("SERVER_KEY", "").
+			Msg("environment variable SERVER_KEY is required")
+	}
 
 	db, err := data.InitDB()
 	if err != nil {

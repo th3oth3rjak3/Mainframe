@@ -58,6 +58,9 @@ build-hmac-win:
 watch:
     gowatch -o ./bin/mainframe -p ./cmd/api
 
+watch-win:
+    gowatch -o ./bin/mainframe.exe -p ./cmd/api
+
 # Build and run the compiled API binary (avoids go run):
 run: swag build
     ./bin/mainframe

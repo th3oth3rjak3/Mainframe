@@ -2,13 +2,11 @@ package handler
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
-	"github.com/th3oth3rjak3/mainframe/internal/domain"
-	mw "github.com/th3oth3rjak3/mainframe/internal/middleware"
 	"github.com/th3oth3rjak3/mainframe/internal/services"
 	"github.com/th3oth3rjak3/mainframe/internal/shared"
 )
@@ -20,12 +18,12 @@ import (
 // @Tags         Users
 // @Accept       json
 // @Produce      json
-// @Success      200 {object} string
+// @Success      200 {object} []domain.UserRead
 // @Router       /api/users [get]
 func HandleListUsers(c echo.Context, userService services.UserService) error {
-	user, ok := c.Request().Context().Value(mw.UserContextKey).(*domain.User)
-	if !ok {
-		return handleUserServiceErrors(c, fmt.Errorf("expected user in context, but found none"))
+	user, err := getUserFromContext(c)
+	if err != nil {
+		return handleUserServiceErrors(c, err)
 	}
 
 	users, err := userService.GetAll(user)
@@ -34,6 +32,37 @@ func HandleListUsers(c echo.Context, userService services.UserService) error {
 	}
 
 	return c.JSON(http.StatusOK, users)
+}
+
+// HandleGetUserByID returns a user by ID.
+//
+// @Summary      Get User
+// @Description  Get one user by ID
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} domain.UserRead
+// @Param        id path string true "User ID"
+// @Router       /api/users/:id [get]
+func HandleGetUserByID(c echo.Context, userService services.UserService) error {
+	user, err := getUserFromContext(c)
+	if err != nil {
+		return handleUserServiceErrors(c, err)
+	}
+
+	idString := c.Param("id")
+	userID, err := uuid.Parse(idString)
+
+	if err != nil {
+		return handleUserServiceErrors(c, err)
+	}
+
+	foundUser, err := userService.GetByID(user, userID)
+	if err != nil {
+		return handleUserServiceErrors(c, err)
+	}
+
+	return c.JSON(http.StatusOK, foundUser)
 }
 
 func handleUserServiceErrors(c echo.Context, err error) error {
