@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { authService, type IAuthService } from "./authService";
-import { AuthenticatedUser, type LoginResponse, type SignInRequest } from "./types";
+import { AuthenticatedUser, type SignInRequest } from "./types";
 // @ts-ignore
 import { ApiError } from "@/lib/apiHelpers";
 
@@ -57,6 +57,8 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
   checkAuth: async (service = authService) => {
     // TODO: Add a getCurrentUser method to authService when backend endpoint exists
+    // @ts-ignore
+    const _ = service;
     set({ isLoading: false });
   },
 }));

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/gofiber/fiber/v2"
 	"github.com/labstack/echo/v4"
 )
 
@@ -24,18 +25,16 @@ type ErrorResponse struct {
 	Message string `json:"message"`
 }
 
-func JsonError(c echo.Context, err error, httpStatus int) error {
-	return c.JSON(httpStatus, ErrorResponse{
+func JsonError(c *fiber.Ctx, err error, httpStatus int) error {
+	return c.JSON(ErrorResponse{
 		Message: err.Error(),
 	})
 }
 
-func InternalServerError(c echo.Context) error {
-	return c.JSON(
-		http.StatusInternalServerError,
-		ErrorResponse{
-			Message: "something bad happened",
-		})
+func InternalServerError(c *fiber.Ctx) error {
+	return c.JSON(ErrorResponse{
+		Message: "something bad happened",
+	})
 }
 
 // in your api/server.go

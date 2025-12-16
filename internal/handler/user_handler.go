@@ -2,10 +2,9 @@ package handler
 
 import (
 	"fmt"
-	"net/http"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
 	"github.com/th3oth3rjak3/mainframe/internal/domain"
 	"github.com/th3oth3rjak3/mainframe/internal/services"
 	"github.com/th3oth3rjak3/mainframe/internal/shared"
@@ -20,7 +19,7 @@ import (
 // @Produce      json
 // @Success      200 {object} []domain.UserRead
 // @Router       /api/users [get]
-func HandleListUsers(c echo.Context, userService services.UserService) error {
+func HandleListUsers(c *fiber.Ctx, userService services.UserService) error {
 	user, err := getUserFromContext(c)
 	if err != nil {
 		return err
@@ -31,7 +30,7 @@ func HandleListUsers(c echo.Context, userService services.UserService) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, users)
+	return c.JSON(users)
 }
 
 // HandleGetUserByID returns a user by ID.
@@ -44,17 +43,17 @@ func HandleListUsers(c echo.Context, userService services.UserService) error {
 // @Success      200 {object} domain.UserRead
 // @Param        id path string true "User ID"
 // @Router       /api/users/:id [get]
-func HandleGetUserByID(c echo.Context, userService services.UserService) error {
+func HandleGetUserByID(c *fiber.Ctx, userService services.UserService) error {
 	user, err := getUserFromContext(c)
 	if err != nil {
 		return err
 	}
 
-	idString := c.Param("id")
+	idString := c.Params("id")
 	userID, err := uuid.Parse(idString)
 
 	if err != nil {
-		return fmt.Errorf("the id parameter was malformed or invalid: %w", shared.ErrBadRequest)
+		return fmt.Errorf("%w: the id parameter was malformed or invalid", shared.ErrBadRequest)
 	}
 
 	foundUser, err := userService.GetByID(user, userID)
@@ -62,7 +61,7 @@ func HandleGetUserByID(c echo.Context, userService services.UserService) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, foundUser)
+	return c.JSON(foundUser)
 }
 
 // HandleCreateUser creates a new user.
@@ -75,7 +74,7 @@ func HandleGetUserByID(c echo.Context, userService services.UserService) error {
 // @Success      200 {object} map[string]string
 // @Param        request body domain.UserCreate true "New User"
 // @Router       /api/users [post]
-func HandleCreateUser(c echo.Context, userService services.UserService) error {
+func HandleCreateUser(c *fiber.Ctx, userService services.UserService) error {
 	user, err := getUserFromContext(c)
 	if err != nil {
 		return err
@@ -83,9 +82,9 @@ func HandleCreateUser(c echo.Context, userService services.UserService) error {
 
 	var request domain.UserCreate
 
-	err = c.Bind(&request)
+	err = c.BodyParser(&request)
 	if err != nil {
-		return fmt.Errorf("the request body is malformed or invalid: %w", shared.ErrBadRequest)
+		return fmt.Errorf("%w: the request body is malformed or invalid", shared.ErrBadRequest)
 	}
 
 	err = request.Validate()
@@ -99,6 +98,6 @@ func HandleCreateUser(c echo.Context, userService services.UserService) error {
 	}
 
 	locationUrl := fmt.Sprintf("api/users/%s", id)
-	c.Response().Header().Set("Location", locationUrl)
-	return c.JSON(http.StatusCreated, map[string]string{"id": id.String()})
+	c.Set("Location", locationUrl)
+	return c.JSON(map[string]string{"id": id.String()})
 }

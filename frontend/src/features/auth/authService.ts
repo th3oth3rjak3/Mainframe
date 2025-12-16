@@ -26,7 +26,7 @@ export interface IAuthService {
 export const authService: IAuthService = {
   signIn: async (request) => {
     return handleApiRequest(async () => {
-      const response = await httpClient.post("auth/signin", { json: request }).json();
+      const response = await httpClient.post("auth/login", { json: request }).json();
 
       return v.parse(LoginResponseSchema, response);
     });
@@ -34,7 +34,7 @@ export const authService: IAuthService = {
 
   signOut: async () => {
     return handleApiRequest(async () => {
-      await httpClient.post("auth/signout");
+      await httpClient.post("auth/logout");
     });
   },
 };

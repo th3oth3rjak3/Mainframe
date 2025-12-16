@@ -10,15 +10,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/joho/godotenv"
-	"github.com/rs/zerolog/log"
 	"github.com/th3oth3rjak3/mainframe/internal/api"
 	"github.com/th3oth3rjak3/mainframe/internal/data"
-	_ "github.com/th3oth3rjak3/mainframe/internal/logger"
 	"github.com/th3oth3rjak3/mainframe/internal/services"
 )
 
-//go:embed web
+//go:embed web/*
 var webAssets embed.FS
 
 // @title           Mainframe API
@@ -29,26 +28,24 @@ var webAssets embed.FS
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Warn().Msg("Warning: .env file not found, relying on environment variables")
+		log.Warn("Warning: .env file not found, relying on environment variables")
 	}
 
 	serverKey := os.Getenv("SERVER_KEY")
 
 	if strings.EqualFold(serverKey, "") {
-		log.Fatal().
-			Str("SERVER_KEY", "").
-			Msg("environment variable SERVER_KEY is required")
+		log.Fatal("environment variable SERVER_KEY is required")
 	}
 
 	db, err := data.InitDB()
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to connect to database")
+		log.Fatalf("failed to connect to database %w", err)
 	}
 	defer db.Close()
 
 	container, err := api.NewServiceContainer(db, serverKey)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to initialize service container")
+		log.Fatalf("failed to initialize service container: %w", err)
 	}
 
 	server := api.NewServer(container, serverKey, webAssets)
@@ -65,7 +62,7 @@ func main() {
 
 	go func() {
 		if err := server.Start(":8080"); err != nil && err != http.ErrServerClosed {
-			log.Fatal().Err(err).Msg("shutdown error occurred")
+			log.Fatalf("shutdown error occurred %w", err)
 		}
 	}()
 
@@ -73,7 +70,7 @@ func main() {
 
 	// ⛔ Block until shutdown signal
 	<-ctx.Done()
-	log.Info().Msg("shutdown signal received")
+	log.Info("shutdown signal received")
 
 	// Graceful server shutdown
 	ctxShutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)

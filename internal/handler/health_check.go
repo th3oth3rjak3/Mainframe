@@ -1,6 +1,8 @@
 package handler
 
-import "github.com/labstack/echo/v4"
+import (
+	"github.com/gofiber/fiber/v2"
+)
 
 type HealthCheckResponse struct {
 	Status string `json:"status"`
@@ -13,6 +15,6 @@ type HealthCheckResponse struct {
 // @Produce      json
 // @Success      200 {object} HealthCheckResponse
 // @Router       /health [get]
-func HandleHealthCheck(c echo.Context) error {
-	return c.JSON(200, HealthCheckResponse{Status: "ok"})
+func HandleHealthCheck(c *fiber.Ctx) error {
+	return c.JSON(HealthCheckResponse{Status: "ok"})
 }

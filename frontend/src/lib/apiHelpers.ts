@@ -6,8 +6,7 @@ import * as v from "valibot";
  * Error response schema matching the backend ErrorResponse struct
  */
 export const ErrorResponseSchema = v.object({
-  message: v.string(),
-  details: v.nullable(v.array(v.string())),
+  error: v.string(),
 });
 
 export type ErrorResponse = v.InferOutput<typeof ErrorResponseSchema>;
@@ -20,7 +19,7 @@ export class ApiError extends Error {
   response: ErrorResponse;
 
   constructor(statusCode: number, response: ErrorResponse) {
-    super(response.message);
+    super(response.error);
     this.name = "ApiError";
     this.statusCode = statusCode;
     this.response = response;

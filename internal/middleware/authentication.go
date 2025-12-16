@@ -1,11 +1,11 @@
 package middleware
 
 import (
-	"context"
+	"strings"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
 	"github.com/th3oth3rjak3/mainframe/internal/crypto"
 	"github.com/th3oth3rjak3/mainframe/internal/repository"
 	"github.com/th3oth3rjak3/mainframe/internal/services"
@@ -48,69 +48,66 @@ func NewAuthMiddleware(
 }
 
 // SessionAuth is the actual middleware function.
-func (m *AuthMiddleware) SessionAuth(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		// Get the session cookie
-		cookie, err := c.Cookie("session_id")
-		if err != nil {
-			return shared.ErrUnauthorized
-		}
-
-		sessionIDString, rawToken, err := m.cookieService.ParseSessionCookie(cookie)
-		if err != nil {
-			return shared.ErrUnauthorized
-		}
-
-		sessionID, err := uuid.Parse(sessionIDString)
-		if err != nil {
-			return shared.ErrUnauthorized
-		}
-
-		// Find the session
-		session, err := m.sessionRepo.GetByID(sessionID)
-		if err != nil {
-			return err
-		}
-
-		// Compare the raw token with the hash value
-		valid := crypto.VerifyVerifier(rawToken, []byte(m.hmacKey), session.Token)
-		if !valid {
-			m.cookieService.ClearCookie(c)
-			return shared.ErrUnauthorized
-		}
-
-		// deal with expired and not found sessions
-		if session == nil || session.ExpiresAt.Before(time.Now().UTC()) {
-			m.cookieService.ClearCookie(c)
-			return shared.ErrUnauthorized
-		}
-
-		// Update sliding expiration window
-		newExpiration := time.Now().UTC().Add(sessionDuration)
-		session.ExpiresAt = newExpiration
-		if err := m.sessionRepo.Update(session); err != nil {
-			return err
-		}
-
-		// Create and set a new cookie with the updated expiration.
-		m.cookieService.SetCookie(c, session, rawToken)
-
-		// Fetch the user associated with the valid session.
-		user, err := m.userRepo.GetByID(session.UserID)
-		if err != nil {
-			return err
-		}
-
-		if user == nil {
-			return shared.ErrUnauthorized
-		}
-
-		// Attach the user object to the context for downstream handlers.
-		ctx := context.WithValue(c.Request().Context(), UserContextKey, user)
-		ctx = context.WithValue(ctx, SessionContextKey, session)
-		c.SetRequest(c.Request().WithContext(ctx))
-
-		// Proceed to the next handler in the chain.
-		return next(c)
+func (m *AuthMiddleware) SessionAuth(c *fiber.Ctx) error {
+	// Get the session cookie
+	cookie := c.Cookies("session_id")
+	if strings.TrimSpace(cookie) == "" {
+		return shared.ErrUnauthorized
 	}
+
+	sessionIDString, rawToken, err := m.cookieService.ParseSessionCookie(cookie)
+	if err != nil {
+		return shared.ErrUnauthorized
+	}
+
+	sessionID, err := uuid.Parse(sessionIDString)
+	if err != nil {
+		return shared.ErrUnauthorized
+	}
+
+	// Find the session
+	session, err := m.sessionRepo.GetByID(sessionID)
+	if err != nil {
+		return err
+	}
+
+	// Compare the raw token with the hash value
+	valid := crypto.VerifyVerifier(rawToken, []byte(m.hmacKey), session.Token)
+	if !valid {
+		m.cookieService.ClearCookie(c)
+		return shared.ErrUnauthorized
+	}
+
+	// deal with expired and not found sessions
+	if session == nil || session.ExpiresAt.Before(time.Now().UTC()) {
+		m.cookieService.ClearCookie(c)
+		return shared.ErrUnauthorized
+	}
+
+	// Update sliding expiration window
+	newExpiration := time.Now().UTC().Add(sessionDuration)
+	session.ExpiresAt = newExpiration
+	if err := m.sessionRepo.Update(session); err != nil {
+		return err
+	}
+
+	// Create and set a new cookie with the updated expiration.
+	m.cookieService.SetCookie(c, session, rawToken)
+
+	// Fetch the user associated with the valid session.
+	user, err := m.userRepo.GetByID(session.UserID)
+	if err != nil {
+		return err
+	}
+
+	if user == nil {
+		return shared.ErrUnauthorized
+	}
+
+	// Attach the user object to the context for downstream handlers.
+	c.Locals(UserContextKey, user)
+	c.Locals(SessionContextKey, session)
+
+	// Proceed to the next handler in the chain.
+	return c.Next()
 }

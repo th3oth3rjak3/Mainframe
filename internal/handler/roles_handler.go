@@ -1,9 +1,7 @@
 package handler
 
 import (
-	"net/http"
-
-	"github.com/labstack/echo/v4"
+	"github.com/gofiber/fiber/v2"
 	"github.com/th3oth3rjak3/mainframe/internal/services"
 )
 
@@ -16,7 +14,7 @@ import (
 // @Produce      json
 // @Success      200 {object} []domain.Role
 // @Router       /api/roles [get]
-func HandleListRoles(c echo.Context, roleService services.RoleService) error {
+func HandleListRoles(c *fiber.Ctx, roleService services.RoleService) error {
 	user, err := getUserFromContext(c)
 	if err != nil {
 		return err
@@ -27,5 +25,5 @@ func HandleListRoles(c echo.Context, roleService services.RoleService) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, roles)
+	return c.JSON(roles)
 }

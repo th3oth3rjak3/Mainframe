@@ -70,10 +70,10 @@ run-win: swag build-win
     ./bin/mainframe
 
 run-hasher pw: build-hasher
-    ./bin/hasher {{pw}}
+    ./bin/hasher '{{pw}}'
 
 run-hasher-win pw: build-hasher-win
-    ./bin/hasher {{pw}}
+    ./bin/hasher '{{pw}}'
 
 run-id: build-id
     ./bin/id_generator

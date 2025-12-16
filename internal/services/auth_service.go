@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/th3oth3rjak3/mainframe/internal/crypto"
 	"github.com/th3oth3rjak3/mainframe/internal/domain"
 	"github.com/th3oth3rjak3/mainframe/internal/repository"
@@ -94,7 +94,7 @@ func (s *authenticationService) handleFailedLogin(user *domain.User) error {
 	}
 
 	// logging ok for critical business and security events.
-	log.Warn().Msg(fmt.Sprintf("invalid login attempt #%d for user %s", user.FailedLoginAttempts, user.Username))
+	log.Warn(fmt.Sprintf("invalid login attempt #%d for user %s", user.FailedLoginAttempts, user.Username))
 	return shared.ErrInvalidCredentials
 }
 
