@@ -20,12 +20,12 @@ import (
 // @Success      200 {object} []domain.UserRead
 // @Router       /api/users [get]
 func HandleListUsers(c *fiber.Ctx, userService services.UserService) error {
-	user, err := getUserFromContext(c)
+	actor, err := getUserFromContext(c)
 	if err != nil {
 		return err
 	}
 
-	users, err := userService.GetAll(user)
+	users, err := userService.GetAll(actor)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func HandleListUsers(c *fiber.Ctx, userService services.UserService) error {
 // @Param        id path string true "User ID"
 // @Router       /api/users/:id [get]
 func HandleGetUserByID(c *fiber.Ctx, userService services.UserService) error {
-	user, err := getUserFromContext(c)
+	actor, err := getUserFromContext(c)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func HandleGetUserByID(c *fiber.Ctx, userService services.UserService) error {
 		return fmt.Errorf("%w: the id parameter was malformed or invalid", shared.ErrBadRequest)
 	}
 
-	foundUser, err := userService.GetByID(user, userID)
+	foundUser, err := userService.GetByID(actor, userID)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func HandleGetUserByID(c *fiber.Ctx, userService services.UserService) error {
 // @Param        request body domain.UserCreate true "New User"
 // @Router       /api/users [post]
 func HandleCreateUser(c *fiber.Ctx, userService services.UserService) error {
-	user, err := getUserFromContext(c)
+	actor, err := getUserFromContext(c)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func HandleCreateUser(c *fiber.Ctx, userService services.UserService) error {
 		return err
 	}
 
-	id, err := userService.Create(user, request)
+	id, err := userService.Create(actor, request)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func HandleCreateUser(c *fiber.Ctx, userService services.UserService) error {
 // @Param        id path string true "User ID"
 // @Router       /api/users/:id [put]
 func HandleUpdateUser(c *fiber.Ctx, userService services.UserService) error {
-	user, err := getUserFromContext(c)
+	actor, err := getUserFromContext(c)
 	if err != nil {
 		return err
 	}
@@ -137,7 +137,38 @@ func HandleUpdateUser(c *fiber.Ctx, userService services.UserService) error {
 		return err
 	}
 
-	err = userService.Update(user, userID, request)
+	err = userService.Update(actor, userID, request)
+	if err != nil {
+		return err
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// HandleDeleteUser deletes a user and all of their records
+//
+// @Summary      Delete User
+// @Description  Delete an application user
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Success      204
+// @Param        id path string true "User ID"
+// @Router       /api/users/:id [delete]
+func HandleDeleteUser(c *fiber.Ctx, userService services.UserService) error {
+	actor, err := getUserFromContext(c)
+	if err != nil {
+		return err
+	}
+
+	idString := c.Params("id")
+	userID, err := uuid.Parse(idString)
+
+	if err != nil {
+		return fmt.Errorf("%w: the id parameter was malformed or invalid", shared.ErrBadRequest)
+	}
+
+	err = userService.Delete(actor, userID)
 	if err != nil {
 		return err
 	}

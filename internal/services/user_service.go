@@ -29,6 +29,10 @@ type UserService interface {
 
 	// Update saves changes to a user based on the request.
 	Update(actor *domain.User, userID uuid.UUID, request domain.UserUpdate) error
+
+	// Delete removes an existing user from the system and cascade deletes all
+	// associated data unrecoverably.
+	Delete(actor *domain.User, userID uuid.UUID) error
 }
 
 func NewUserService(
@@ -143,6 +147,24 @@ func (s *userService) Update(actor *domain.User, userID uuid.UUID, request domai
 	err = s.userRepository.UpdateBasic(user)
 	if err != nil {
 		return fmt.Errorf("failed to save updated user: %w", err)
+	}
+
+	return nil
+}
+
+func (s *userService) Delete(actor *domain.User, userID uuid.UUID) error {
+	if actor == nil || !actor.HasRole(domain.Administrator) {
+		return shared.ErrForbidden
+	}
+
+	user, err := s.userRepository.GetByID(userID)
+	if err != nil {
+		return fmt.Errorf("failed to get by ID: %w", err)
+	}
+
+	err = s.userRepository.Delete(user)
+	if err != nil {
+		return err
 	}
 
 	return nil

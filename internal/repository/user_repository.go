@@ -31,6 +31,10 @@ type UserRepository interface {
 	// Update an existing user's basic details, does not update
 	// collection objects like roles.
 	UpdateBasic(user *domain.User) error
+
+	// Delete an existing user and all of the associated data.
+	// This is unrecoverable.
+	Delete(user *domain.User) error
 }
 
 type sqliteUserRepository struct {
@@ -214,6 +218,26 @@ func (r *sqliteUserRepository) UpdateBasic(user *domain.User) error {
 
 	if rows != 1 {
 		return fmt.Errorf("expected to update 1 user row, but rows affected was %d", rows)
+	}
+
+	return nil
+}
+
+func (r *sqliteUserRepository) Delete(user *domain.User) error {
+	query := "DELETE FROM users WHERE id = ?"
+
+	result, err := r.db.Exec(query, user.ID)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if affected != 1 {
+		return fmt.Errorf("expected to delete 1 record, rows affected: %d", affected)
 	}
 
 	return nil
