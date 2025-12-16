@@ -127,6 +127,9 @@ func (s *Server) registerRoutes() {
 	usersGroup.Post("", func(c *fiber.Ctx) error {
 		return handler.HandleCreateUser(c, s.container.UserService)
 	})
+	usersGroup.Put("/:id", func(c *fiber.Ctx) error {
+		return handler.HandleUpdateUser(c, s.container.UserService)
+	})
 
 	// Roles group
 	rolesGroup := protectedGroup.Group("/roles", adminRoleRequired)

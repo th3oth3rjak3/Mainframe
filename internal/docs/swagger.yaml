@@ -74,6 +74,17 @@ definitions:
       username:
         type: string
     type: object
+  domain.UserUpdate:
+    properties:
+      email:
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      username:
+        type: string
+    type: object
   handler.HealthCheckResponse:
     properties:
       status:
@@ -197,6 +208,30 @@ paths:
           schema:
             $ref: '#/definitions/domain.UserRead'
       summary: Get User
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      description: Update an application user
+      parameters:
+      - description: Update User
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UserUpdate'
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      summary: Update User
       tags:
       - Users
   /health:

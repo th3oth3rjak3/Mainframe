@@ -8,13 +8,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/th3oth3rjak3/mainframe/internal/domain"
+	"github.com/th3oth3rjak3/mainframe/internal/shared"
 )
 
 type UserRepository interface {
-	// Fetch a user by ID
+	// Fetch a user by ID, when not found, returns an error.
 	GetByID(id uuid.UUID) (*domain.User, error)
 
-	// Fetch a user by Username
+	// Fetch a user by Username, when not found returns an error.
 	GetByUsername(username string) (*domain.User, error)
 
 	// Get all users.
@@ -54,7 +55,7 @@ func (r *sqliteUserRepository) GetByID(id uuid.UUID) (*domain.User, error) {
 
 	err := r.db.Get(&user, query, id.String())
 	if err == sql.ErrNoRows {
-		return nil, nil // not found
+		return nil, shared.ErrNotFound // not found
 	}
 
 	if err != nil {
@@ -84,7 +85,7 @@ func (r *sqliteUserRepository) GetByUsername(username string) (*domain.User, err
 
 	err := r.db.Get(&user, query, strings.ToLower(username))
 	if err == sql.ErrNoRows {
-		return nil, nil
+		return nil, shared.ErrNotFound
 	}
 
 	if err != nil {

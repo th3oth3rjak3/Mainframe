@@ -41,10 +41,10 @@ func LogInfo(msg string) {
 	fmt.Printf("%s | %s | %s | %s | %s | %s | %s\n",
 		now,
 		centerPad("-", 3),  // status
-		centerPad("-", 12), // latency
-		centerPad("-", 11), // IP
+		centerPad("-", 13), // latency
+		centerPad("-", 9),  // IP
 		centerPad("-", 3),  // method
-		centerPad("-", 5), // path
+		centerPad("-", 5),  // path
 		msg,
 	)
 }
@@ -58,7 +58,7 @@ func LogError(msg string, err error) {
 		centerPad("-", 12), // latency
 		centerPad("-", 11), // IP
 		centerPad("-", 3),  // method
-		centerPad("-", 5), // path
+		centerPad("-", 5),  // path
 		msg,
 		err,
 	)

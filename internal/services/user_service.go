@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/th3oth3rjak3/mainframe/internal/domain"
@@ -14,17 +15,20 @@ type UserService interface {
 	// to be more than 25 users for this application, so paging
 	// isn't necessary. The supplied user is the one performing the
 	// request and must have the correct role to access this resource.
-	GetAll(user *domain.User) ([]domain.UserRead, error)
+	GetAll(actor *domain.User) ([]domain.UserRead, error)
 
 	// GetByID gets a user by their ID. If the user is not found
 	// no error will be returned and the user will be nil.
 	// The supplied user must have the correct role to access this
 	// protected resource.
-	GetByID(user *domain.User, userID uuid.UUID) (*domain.UserRead, error)
+	GetByID(actor *domain.User, userID uuid.UUID) (*domain.UserRead, error)
 
 	// Create makes a new user from the provided request. The ID of the new
 	// user will be returned upon success.
-	Create(user *domain.User, request domain.UserCreate) (uuid.UUID, error)
+	Create(actor *domain.User, request domain.UserCreate) (uuid.UUID, error)
+
+	// Update saves changes to a user based on the request.
+	Update(actor *domain.User, userID uuid.UUID, request domain.UserUpdate) error
 }
 
 func NewUserService(
@@ -45,8 +49,8 @@ type userService struct {
 	passwordHasher domain.PasswordHasher
 }
 
-func (s *userService) GetAll(user *domain.User) ([]domain.UserRead, error) {
-	if user == nil || !user.HasRole(domain.Administrator) {
+func (s *userService) GetAll(actor *domain.User) ([]domain.UserRead, error) {
+	if actor == nil || !actor.HasRole(domain.Administrator) {
 		return nil, shared.ErrForbidden
 	}
 
@@ -64,8 +68,8 @@ func (s *userService) GetAll(user *domain.User) ([]domain.UserRead, error) {
 	return userList, nil
 }
 
-func (s *userService) GetByID(user *domain.User, userID uuid.UUID) (*domain.UserRead, error) {
-	if user == nil || !user.HasRole(domain.Administrator) {
+func (s *userService) GetByID(actor *domain.User, userID uuid.UUID) (*domain.UserRead, error) {
+	if actor == nil || !actor.HasRole(domain.Administrator) {
 		return nil, shared.ErrForbidden
 	}
 
@@ -78,8 +82,8 @@ func (s *userService) GetByID(user *domain.User, userID uuid.UUID) (*domain.User
 	return &userRead, nil
 }
 
-func (s *userService) Create(user *domain.User, request domain.UserCreate) (uuid.UUID, error) {
-	if user == nil || !user.HasRole(domain.Administrator) {
+func (s *userService) Create(actor *domain.User, request domain.UserCreate) (uuid.UUID, error) {
+	if actor == nil || !actor.HasRole(domain.Administrator) {
 		return uuid.UUID{}, shared.ErrForbidden
 	}
 
@@ -118,4 +122,28 @@ func (s *userService) Create(user *domain.User, request domain.UserCreate) (uuid
 	}
 
 	return newUser.ID, nil
+}
+
+func (s *userService) Update(actor *domain.User, userID uuid.UUID, request domain.UserUpdate) error {
+	if actor == nil || !actor.HasRole(domain.Administrator) {
+		return shared.ErrForbidden
+	}
+
+	user, err := s.userRepository.GetByID(userID)
+	if err != nil {
+		return fmt.Errorf("failed to get by ID: %w", err)
+	}
+
+	user.FirstName = request.FirstName
+	user.LastName = request.LastName
+	user.Email = request.Email
+	user.Username = request.Username
+	user.UpdatedAt = time.Now().UTC()
+
+	err = s.userRepository.UpdateBasic(user)
+	if err != nil {
+		return fmt.Errorf("failed to save updated user: %w", err)
+	}
+
+	return nil
 }

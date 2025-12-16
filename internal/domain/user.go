@@ -118,3 +118,13 @@ type UserUpdate struct {
 	Email     string `json:"email"`
 	Username  string `json:"username"`
 }
+
+func (u *UserUpdate) Validate() error {
+	return validation.ValidateStruct(
+		u,
+		validation.Field(&u.FirstName, validation.Required, validation.Length(1, 100), is.Alpha),
+		validation.Field(&u.LastName, validation.Required, validation.Length(1, 100), is.Alpha),
+		validation.Field(&u.Email, validation.Required, is.Email),
+		validation.Field(&u.Username, validation.Required, validation.Length(3, 50)),
+	)
+}
