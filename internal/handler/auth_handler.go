@@ -25,7 +25,6 @@ func HandleLogin(
 	authService services.AuthenticationService,
 	cookieService services.CookieService,
 ) error {
-
 	var req domain.LoginRequest
 
 	if err := c.BodyParser(&req); err != nil {
@@ -73,4 +72,26 @@ func HandleLogout(
 	cookieService.ClearCookie(c)
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// HandleRefreshLoginDetails returns the same details that
+// were returned when a user first logs in. This is used
+// to allow the client to refresh information about a user
+// when the browser refreshes.
+//
+// @Summary      Refresh User Details
+// @Description  Get user login details after refresh
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} domain.LoginResponse
+// @Router       /api/auth/me [get]
+func HandleRefreshLoginDetails(c *fiber.Ctx) error {
+	actor, err := getUserFromContext(c)
+	if err != nil {
+		return err
+	}
+
+	response := domain.NewLoginResponse(actor)
+	return c.JSON(response)
 }

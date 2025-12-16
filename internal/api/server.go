@@ -81,23 +81,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 // registerRoutes sets up all the HTTP routes for the application.
 func (s *Server) registerRoutes() {
-	// Simple health check route
-	s.router.Get("/health", handler.HandleHealthCheck)
-
-	// Documentation routes
-	s.router.Get("/openapi.json", handler.HandleOpenAPI)
-	s.router.Get("/docs", handler.HandleDocs)
-
-	// API routes
-	apiGroup := s.router.Group("/api")
-	authGroup := apiGroup.Group("/auth")
-
-	// auth routes
-	authGroup.Post("/login", func(c *fiber.Ctx) error {
-		return handler.HandleLogin(c, s.container.AuthenticationService, s.container.CookieService)
-	})
-
-	// PROTECTED ROUTES
 	authMiddleware := mw.NewAuthMiddleware(
 		s.container.SessionRepository,
 		s.container.UserRepository,
@@ -105,43 +88,23 @@ func (s *Server) registerRoutes() {
 		s.hmacKey,
 	)
 
+	s.registerHealthCheckRoute()
+	s.registerDocumentationRoutes()
+
+	apiGroup := s.router.Group("/api")
+	s.registerAuthenticationRoutes(apiGroup, authMiddleware)
+
+	// Routes below here are all protected
 	protectedGroup := apiGroup.Group("", authMiddleware.SessionAuth)
+	s.registerUserRoutes(protectedGroup)
+	s.registerRoleRoutes(protectedGroup)
 
-	adminRoleRequired := mw.RequireRole(domain.Administrator)
-
-	// logout route
-	authGroup.Post("/logout",
-		authMiddleware.SessionAuth,
-		func(c *fiber.Ctx) error {
-			return handler.HandleLogout(c, s.container.AuthenticationService, s.container.CookieService)
-		})
-
-	// Users Group
-	usersGroup := protectedGroup.Group("/users", adminRoleRequired)
-	usersGroup.Get("", func(c *fiber.Ctx) error {
-		return handler.HandleListUsers(c, s.container.UserService)
-	})
-	usersGroup.Get("/:id", func(c *fiber.Ctx) error {
-		return handler.HandleGetUserByID(c, s.container.UserService)
-	})
-	usersGroup.Post("", func(c *fiber.Ctx) error {
-		return handler.HandleCreateUser(c, s.container.UserService)
-	})
-	usersGroup.Put("/:id", func(c *fiber.Ctx) error {
-		return handler.HandleUpdateUser(c, s.container.UserService)
-	})
-	usersGroup.Delete("/:id", func(c *fiber.Ctx) error {
-		return handler.HandleDeleteUser(c, s.container.UserService)
-	})
-
-	// Roles group
-	rolesGroup := protectedGroup.Group("/roles", adminRoleRequired)
-	rolesGroup.Get("", func(c *fiber.Ctx) error {
-		return handler.HandleListRoles(c, s.container.RoleService)
-	})
 }
 
-// Custom error handler
+// customErrorHandler is used in the fiber router to perform all error handling
+// after the handler returns. This is used as a central location to handle
+// error conversion to response status codes and return a consistent error
+// type so it's easier to handle on the client.
 func customErrorHandler(c *fiber.Ctx, err error) error {
 	code := fiber.StatusInternalServerError
 
@@ -173,5 +136,67 @@ func customErrorHandler(c *fiber.Ctx, err error) error {
 	// Return JSON response
 	return c.Status(code).JSON(fiber.Map{
 		"error": err.Error(),
+	})
+}
+
+// registerHealthCheckRoute associates the health check handler with the correct route.
+func (s *Server) registerHealthCheckRoute() {
+	s.router.Get("/health", handler.HandleHealthCheck)
+}
+
+// registerDocutnationRoutes registers the open api and scalar documentation endpoints
+// with the server router.
+func (s *Server) registerDocumentationRoutes() {
+	s.router.Get("/openapi.json", handler.HandleOpenAPI)
+	s.router.Get("/docs", handler.HandleDocs)
+}
+
+// registerAuthenticationRoutes registers all the routes associated with authentication
+func (s *Server) registerAuthenticationRoutes(router fiber.Router, authMiddleware *mw.AuthMiddleware) {
+	authGroup := router.Group("/auth")
+
+	// Not protected on purpose to allow login
+	authGroup.Post("/login", func(c *fiber.Ctx) error {
+		return handler.HandleLogin(c, s.container.AuthenticationService, s.container.CookieService)
+	})
+
+	authGroup.Post("/logout",
+		authMiddleware.SessionAuth,
+		func(c *fiber.Ctx) error {
+			return handler.HandleLogout(c, s.container.AuthenticationService, s.container.CookieService)
+		})
+
+	authGroup.Get("/me", authMiddleware.SessionAuth, handler.HandleRefreshLoginDetails)
+}
+
+// registerUserRoutes registers all the routes associated with users.
+// The router is expected to be protected by authentication middleware.
+func (s *Server) registerUserRoutes(router fiber.Router) {
+	adminRoleRequired := mw.RequireRole(domain.Administrator)
+	usersGroup := router.Group("/users", adminRoleRequired)
+	usersGroup.Get("", func(c *fiber.Ctx) error {
+		return handler.HandleListUsers(c, s.container.UserService)
+	})
+	usersGroup.Get("/:id", func(c *fiber.Ctx) error {
+		return handler.HandleGetUserByID(c, s.container.UserService)
+	})
+	usersGroup.Post("", func(c *fiber.Ctx) error {
+		return handler.HandleCreateUser(c, s.container.UserService)
+	})
+	usersGroup.Put("/:id", func(c *fiber.Ctx) error {
+		return handler.HandleUpdateUser(c, s.container.UserService)
+	})
+	usersGroup.Delete("/:id", func(c *fiber.Ctx) error {
+		return handler.HandleDeleteUser(c, s.container.UserService)
+	})
+}
+
+// registerRoleRoutes registers all the routes associated with roles.
+// The router is expectecd to be protected by authentication middleware.
+func (s *Server) registerRoleRoutes(router fiber.Router) {
+	adminRoleRequired := mw.RequireRole(domain.Administrator)
+	rolesGroup := router.Group("/roles", adminRoleRequired)
+	rolesGroup.Get("", func(c *fiber.Ctx) error {
+		return handler.HandleListRoles(c, s.container.RoleService)
 	})
 }

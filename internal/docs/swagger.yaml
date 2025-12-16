@@ -132,6 +132,21 @@ paths:
       summary: Logout user
       tags:
       - Authentication
+  /api/auth/me:
+    get:
+      consumes:
+      - application/json
+      description: Get user login details after refresh
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.LoginResponse'
+      summary: Refresh User Details
+      tags:
+      - Authentication
   /api/roles:
     get:
       consumes:
